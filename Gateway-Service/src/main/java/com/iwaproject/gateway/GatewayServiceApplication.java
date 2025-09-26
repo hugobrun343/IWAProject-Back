@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class GatewayServiceApplication {
 
     public static void main(String[] args) {
-        // test3
+        // test4
         SpringApplication.run(GatewayServiceApplication.class, args);
     }
 

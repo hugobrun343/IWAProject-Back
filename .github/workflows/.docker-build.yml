@@ -127,7 +127,16 @@ jobs:
           sudo service xl2tpd restart
 
           echo "Starting VPN connection..."
-          sudo ipsec up myvpn
+          
+          # Start IPSec with timeout
+          timeout 30 sudo ipsec up myvpn || {
+              echo "❌ IPSec connection failed or timeout"
+              echo "Debug info:"
+              sudo ipsec status
+              sudo ipsec logs
+              exit 1
+          }
+          
           echo "c myvpn" | sudo tee /var/run/xl2tpd/l2tp-control
 
           # Wait for VPN with timeout (max 60 seconds)
