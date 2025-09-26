@@ -63,6 +63,8 @@ jobs:
       packages: write
     # Skip job if no services changed
     if: needs.detect-changes.outputs.matrix != '{"include":[]}'
+    outputs:
+      short-sha: ${{ steps.sha.outputs.short_sha }}
 
     steps:
       - name: Checkout repository
@@ -231,6 +233,8 @@ jobs:
           ssh-keyscan -H "${{ secrets.DOKKU_ADDR }}" >> ~/.ssh/known_hosts || { echo "❌ ssh-keyscan failed"; exit 1; }
 
       - name: Clean up old GitHub Container Registry images
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "🧹 Cleaning up old images for ${{ matrix.service }} on GitHub Container Registry"
           
@@ -249,7 +253,7 @@ jobs:
           echo "🚀 Deploying ${{ matrix.service }} from GitHub Container Registry to ${{ matrix.dokku-app }}"
           
           # Use the same short SHA from build step
-          SHORT_SHA="${{ steps.sha.outputs.short_sha }}"
+          SHORT_SHA="${{ needs.build-and-push.outputs.short-sha }}"
           echo "Using short SHA: $SHORT_SHA"
           
           # Deploy using 7-character SHA tag
