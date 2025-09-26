@@ -82,9 +82,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/iwaproject
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
           tags: |
-            type=raw,value=${{ matrix.service }}-latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}},value=${{ github.ref_name }},enable={{is_default_branch}}
 
       - name: Build and push Docker image
@@ -114,9 +114,7 @@ jobs:
       - name: Cache APT packages
         uses: actions/cache@v3
         with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
+          path: /var/cache/apt
           key: ${{ runner.os }}-apt-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-apt-
@@ -231,7 +229,7 @@ jobs:
           echo "🚀 Deploying ${{ matrix.service }} from GitHub Container Registry to ${{ matrix.dokku-app }}"
           
           # Always deploy latest version
-          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ghcr.io/${{ github.repository_owner }}/iwaproject:${{ matrix.service }}-latest"
+          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}:latest"
 
       - name: Disconnect VPN
         if: always()
