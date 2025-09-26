@@ -1,10 +1,13 @@
-name: Build and Deploy to Dokku via VPN
+name: Build Docker Images and Deploy to Dokku
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+env:
+  REGISTRY: docker.io
 
 jobs:
   detect-changes:
@@ -24,7 +27,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           echo "Changed files: $CHANGED_FILES"
           
-          # Define services mapping (["NOM_DU_DOSSIER"]="nom-service:nom-app-dokku")
+          # Define services mapping (["NOM_DOSSIER"]="nom-service:nom-app-dokku")
           declare -A SERVICES=(
             ["Gateway-Service"]="gateway:homeguard"
           )
@@ -50,8 +53,51 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           echo "Generated matrix: $MATRIX"
 
-  build-and-deploy:
+  build-and-push:
     needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
+    # Skip job if no services changed
+    if: needs.detect-changes.outputs.matrix != '{"include":[]}'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject
+          tags: |
+            type=raw,value=${{ matrix.service }}-latest,enable={{is_default_branch}}
+            type=raw,value=${{ matrix.service }}-{{sha}},enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.folder }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-to-dokku:
+    needs: [detect-changes, build-and-push]
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -133,7 +179,6 @@ jobs:
               echo "❌ IPSec connection failed or timeout"
               echo "Debug info:"
               sudo ipsec status
-              sudo ipsec logs
               exit 1
           }
           
@@ -171,33 +216,15 @@ jobs:
           ssh-add ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.DOKKU_ADDR }}" >> ~/.ssh/known_hosts || { echo "❌ ssh-keyscan failed"; exit 1; }
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./${{ matrix.folder }}
-          push: false
-          tags: ${{ matrix.service }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to Dokku
+      - name: Pull and Deploy from Docker Hub
         run: |
-          echo "🚀 Deploying ${{ matrix.service }} to Dokku app: ${{ matrix.dokku-app }}"
+          echo "🚀 Pulling ${{ matrix.service }} from Docker Hub and deploying to ${{ matrix.dokku-app }}"
           
-          # Save Docker image to tar file
-          docker save ${{ matrix.service }}:latest -o ${{ matrix.service }}.tar
-          
-          # Copy image to Dokku server
-          scp ${{ matrix.service }}.tar dokku@${{ secrets.DOKKU_ADDR }}:/tmp/
-          
-          # Load image on Dokku server and deploy
+          # Login to Docker Hub on Dokku server
           ssh dokku@${{ secrets.DOKKU_ADDR }} "
-            docker load -i /tmp/${{ matrix.service }}.tar
-            dokku git:from-image ${{ matrix.dokku-app }} ${{ matrix.service }}:latest
-            rm /tmp/${{ matrix.service }}.tar
+            echo '${{ secrets.DOCKERHUB_TOKEN_DOKKU }}' | docker login -u '${{ secrets.DOCKERHUB_USERNAME }}' --password-stdin
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest
+            dokku git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest
           "
 
       - name: Disconnect VPN
