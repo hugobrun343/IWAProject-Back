@@ -126,15 +126,28 @@ jobs:
           sudo service ipsec restart
           sudo service xl2tpd restart
 
+          echo "Starting VPN connection..."
           sudo ipsec up myvpn
           echo "c myvpn" | sudo tee /var/run/xl2tpd/l2tp-control
 
+          # Wait for VPN with timeout (max 60 seconds)
+          TIMEOUT=60
+          COUNTER=0
           while ! ip addr show ppp0 | grep -q "inet "; do
-              echo "Waiting for ppp0 to be up..."
+              echo "Waiting for ppp0 to be up... ($COUNTER/$TIMEOUT)"
               sleep 1
+              COUNTER=$((COUNTER + 1))
+              if [ $COUNTER -gt $TIMEOUT ]; then
+                  echo "❌ VPN connection timeout after $TIMEOUT seconds"
+                  echo "Debug info:"
+                  ip addr show
+                  sudo ipsec status
+                  exit 1
+              fi
           done
-          echo "ppp0 is up!"
+          echo "✅ ppp0 is up!"
 
+          echo "Adding route to Dokku server..."
           sudo ip route add $(nslookup ${{ secrets.DOKKU_ADDR }} | awk '/^Address: / { print $2 }' | tail -n1) dev ppp0
 
       - name: Setup SSH Key for Dokku
