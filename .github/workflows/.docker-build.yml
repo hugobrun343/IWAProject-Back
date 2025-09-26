@@ -215,14 +215,11 @@ jobs:
           ssh-add ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.DOKKU_ADDR }}" >> ~/.ssh/known_hosts || { echo "❌ ssh-keyscan failed"; exit 1; }
 
-      - name: Pull and Deploy from Docker Hub
+      - name: Deploy from Docker Hub
         run: |
-          echo "🚀 Pulling ${{ matrix.service }} from Docker Hub and deploying to ${{ matrix.dokku-app }}"
+          echo "🚀 Deploying ${{ matrix.service }} from Docker Hub to ${{ matrix.dokku-app }}"
           
-          # Pull image from Docker Hub (public repository)
-          ssh dokku@${{ secrets.DOKKU_ADDR }} "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest"
-          
-          # Deploy to Dokku
+          # Deploy directly from Docker Hub (Dokku handles the pull)
           ssh dokku@${{ secrets.DOKKU_ADDR }} "dokku git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest"
 
       - name: Disconnect VPN
