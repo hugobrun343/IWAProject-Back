@@ -105,8 +105,6 @@ jobs:
       contents: read
     # Skip job if no services changed
     if: needs.detect-changes.outputs.matrix != '{"include":[]}'
-    # Wait before starting deployment
-    environment: docker-hub-delay
 
     steps:
       - name: Checkout repository
@@ -116,7 +114,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /var/cache/apt
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache') }}
+          key: ${{ runner.os }}-apt-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-apt-
 
