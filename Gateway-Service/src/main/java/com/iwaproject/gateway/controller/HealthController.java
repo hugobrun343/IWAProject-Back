@@ -23,7 +23,7 @@ public class HealthController {
     @GetMapping("/testdecon")
     public Map<String, Object> testdecon() {
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Hello World debile!");
+        response.put("message", "Hello World de gros débile!");
         response.put("timestamp", LocalDateTime.now());
         response.put("deployment", "Success");
         return response;
