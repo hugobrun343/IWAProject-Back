@@ -220,7 +220,7 @@ jobs:
           echo "🚀 Deploying ${{ matrix.service }} from Docker Hub to ${{ matrix.dokku-app }}"
           
           # Deploy directly from Docker Hub (Dokku handles the pull)
-          ssh dokku@${{ secrets.DOKKU_ADDR }} "dokku git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest"
+          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-latest"
 
       - name: Disconnect VPN
         if: always()
