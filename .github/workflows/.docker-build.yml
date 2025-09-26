@@ -26,7 +26,7 @@ jobs:
           
           # Define services mapping (["NOM_DU_DOSSIER"]="nom-service:nom-app-dokku")
           declare -A SERVICES=(
-            ["Gateway-Service"]="gateway:iwaproject-gateway"
+            ["Gateway-Service"]="gateway:homeguard"
           )
           
           # Build matrix for changed services
