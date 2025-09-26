@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class GatewayServiceApplication {
 
     public static void main(String[] args) {
-        // test11
+        // Gateway Service - Updated for deployment test
         SpringApplication.run(GatewayServiceApplication.class, args);
     }
 
