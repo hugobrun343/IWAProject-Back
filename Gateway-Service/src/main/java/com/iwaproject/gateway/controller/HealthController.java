@@ -20,14 +20,12 @@ public class HealthController {
         return response;
     }
 
-    @GetMapping("/status")
-    public Map<String, Object> status() {
+    @GetMapping("/testdecon")
+    public Map<String, Object> testdecon() {
         Map<String, Object> response = new HashMap<>();
-        response.put("service", "IWA Project Gateway");
-        response.put("status", "ACTIVE");
-        response.put("uptime", "Running since deployment");
-        response.put("lastUpdate", LocalDateTime.now());
-        response.put("features", new String[]{"API Gateway", "Load Balancing", "Authentication"});
+        response.put("message", "Hello World debile!");
+        response.put("timestamp", LocalDateTime.now());
+        response.put("deployment", "Success");
         return response;
     }
 }
