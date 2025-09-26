@@ -78,14 +78,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get short SHA
+        id: sha
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "Using short SHA: $SHORT_SHA"
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}},value=${{ github.ref_name }},enable={{is_default_branch}}
+            type=raw,value=${{ steps.sha.outputs.short_sha }},enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -224,12 +230,30 @@ jobs:
           ssh-add ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.DOKKU_ADDR }}" >> ~/.ssh/known_hosts || { echo "❌ ssh-keyscan failed"; exit 1; }
 
+      - name: Clean up old GitHub Container Registry images
+        run: |
+          echo "🧹 Cleaning up old images for ${{ matrix.service }} on GitHub Container Registry"
+          
+          # Get list of package versions (keep only the last 2)
+          PACKAGE_NAME="${{ matrix.service }}"
+          OWNER="${{ github.repository_owner }}"
+          
+          # Get package versions and delete old ones (keep last 2 chronologically)
+          gh api repos/$OWNER/packages/container/$PACKAGE_NAME/versions \
+            --jq 'sort_by(.created_at) | .[2:] | .[].id' \
+            | xargs -I {} gh api repos/$OWNER/packages/container/$PACKAGE_NAME/versions/{} \
+            --method DELETE || echo "No old images to clean up"
+
       - name: Deploy from GitHub Container Registry
         run: |
           echo "🚀 Deploying ${{ matrix.service }} from GitHub Container Registry to ${{ matrix.dokku-app }}"
           
-          # Always deploy latest version
-          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}:latest"
+          # Use the same short SHA from build step
+          SHORT_SHA="${{ steps.sha.outputs.short_sha }}"
+          echo "Using short SHA: $SHORT_SHA"
+          
+          # Deploy using 7-character SHA tag
+          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}:$SHORT_SHA"
 
       - name: Disconnect VPN
         if: always()
