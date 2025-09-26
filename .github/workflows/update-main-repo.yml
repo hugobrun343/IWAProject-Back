@@ -23,6 +23,7 @@ jobs:
 
           # Inject token into submodule URLs
           git config -f .gitmodules submodule.back.url https://x-access-token:${{ secrets.MAIN_REPO_TOKEN }}@github.com/${{ github.repository }}.git
+          git config -f .gitmodules submodule.front.url https://x-access-token:${{ secrets.MAIN_REPO_TOKEN }}@github.com/${{ secrets.MAIN_REPO_OWNER }}/IWAProject-Front.git
 
           git submodule sync
           git submodule update --init --recursive
