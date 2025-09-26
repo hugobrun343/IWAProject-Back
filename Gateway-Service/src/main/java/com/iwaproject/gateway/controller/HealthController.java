@@ -20,7 +20,7 @@ public class HealthController {
         return response;
     }
 
-    @GetMapping("/testdecon")
+    @GetMapping("/test")
     public Map<String, Object> testdecon() {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Hello World, it works");

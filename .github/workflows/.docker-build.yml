@@ -113,7 +113,9 @@ jobs:
       - name: Cache APT packages
         uses: actions/cache@v3
         with:
-          path: /var/cache/apt
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
           key: ${{ runner.os }}-apt-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-apt-
