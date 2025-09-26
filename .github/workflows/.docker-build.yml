@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Build and Deploy to Dokku via VPN
 
 on:
   push:
@@ -6,48 +6,181 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  REGISTRY: docker.io
-
 jobs:
-  build:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: changes
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files: $CHANGED_FILES"
+          
+          # Define services mapping (["NOM_DU_DOSSIER"]="nom-service:nom-app-dokku")
+          declare -A SERVICES=(
+            ["Gateway-Service"]="gateway:iwaproject-gateway"
+          )
+          
+          # Build matrix for changed services
+          MATRIX='{"include":[]}'
+          
+          for folder in "${!SERVICES[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^$folder/"; then
+              IFS=':' read -r service dokku_app <<< "${SERVICES[$folder]}"
+              echo "✅ $folder changed - will deploy $service to $dokku_app"
+              
+              # Add to matrix
+              MATRIX=$(echo "$MATRIX" | jq --arg folder "$folder" --arg service "$service" --arg dokku_app "$dokku_app" '.include += [{"folder": $folder, "service": $service, "dokku-app": $dokku_app}]')
+            else
+              echo "⏭️ $folder unchanged - skipping"
+            fi
+          done
+          
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $MATRIX"
+
+  build-and-deploy:
+    needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        service: [gateway]
-        folder: [Gateway-Service]
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     permissions:
       contents: read
-      packages: write
+    # Skip job if no services changed
+    if: needs.detect-changes.outputs.matrix != '{"include":[]}'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Required Packages
+        run: |
+          sudo apt update
+          sudo apt-get install -y strongswan xl2tpd net-tools jq
+
+      - name: Add VPN Connection
+        run: |
+          sudo bash -c 'cat > /etc/ipsec.conf <<EOF
+          conn myvpn
+            auto=add
+            keyexchange=ikev1
+            authby=secret
+            type=transport
+            left=%defaultroute
+            leftprotoport=17/1701
+            rightprotoport=17/1701
+            right=${{ secrets.VPN_GATEWAY }}
+            ike=3des-sha1-modp1024
+            esp=3des-sha1
+          EOF'
+
+          sudo bash -c 'cat > /etc/ipsec.secrets <<EOF
+          : PSK "${{ secrets.VPN_PSK }}"
+          EOF'
+
+          sudo chmod 600 /etc/ipsec.secrets
+
+          sudo bash -c 'cat > /etc/xl2tpd/xl2tpd.conf <<EOF
+          [lac myvpn]
+          lns = ${{ secrets.VPN_GATEWAY }}
+          ppp debug = yes
+          pppoptfile = /etc/ppp/options.l2tpd.client
+          length bit = yes
+          EOF'
+
+          sudo bash -c 'cat > /etc/ppp/options.l2tpd.client <<EOF
+          ipcp-accept-local
+          ipcp-accept-remote
+          refuse-eap
+          require-chap
+          noccp
+          noauth
+          mtu 1280
+          mru 1280
+          noipdefault
+          defaultroute
+          usepeerdns
+          connect-delay 5000
+          domain "${{ secrets.VPN_NT_DOMAIN }}"
+          name "${{ secrets.VPN_USERNAME }}"
+          password "${{ secrets.VPN_PASSWORD }}"
+          EOF'
+
+          sudo chmod 600 /etc/ppp/options.l2tpd.client
+
+      - name: Start VPN Connection
+        run: |
+          sudo mkdir -p /var/run/xl2tpd
+          sudo touch /var/run/xl2tpd/l2tp-control
+          sudo service ipsec restart
+          sudo service xl2tpd restart
+
+          sudo ipsec up myvpn
+          echo "c myvpn" | sudo tee /var/run/xl2tpd/l2tp-control
+
+          while ! ip addr show ppp0 | grep -q "inet "; do
+              echo "Waiting for ppp0 to be up..."
+              sleep 1
+          done
+          echo "ppp0 is up!"
+
+          sudo ip route add $(nslookup ${{ secrets.DOKKU_ADDR }} | awk '/^Address: / { print $2 }' | tail -n1) dev ppp0
+
+      - name: Setup SSH Key for Dokku
+        run: |
+          echo "Setting up SSH key..."
+          mkdir -p ~/.ssh
+          cat <<EOF > ~/.ssh/id_rsa
+          ${{ secrets.DOKKU_SSH_KEY }}
+          EOF
+          chmod 600 ~/.ssh/id_rsa
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.DOKKU_ADDR }}" >> ~/.ssh/known_hosts || { echo "❌ ssh-keyscan failed"; exit 1; }
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject
-          tags: |
-            type=raw,value=${{ matrix.service }}-latest,enable={{is_default_branch}}
-            type=raw,value=${{ matrix.service }}-{{sha}},enable={{is_default_branch}}
-
-      - name: Build and push Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.folder }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          tags: ${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Deploy to Dokku
+        run: |
+          echo "🚀 Deploying ${{ matrix.service }} to Dokku app: ${{ matrix.dokku-app }}"
+          
+          # Save Docker image to tar file
+          docker save ${{ matrix.service }}:latest -o ${{ matrix.service }}.tar
+          
+          # Copy image to Dokku server
+          scp ${{ matrix.service }}.tar dokku@${{ secrets.DOKKU_ADDR }}:/tmp/
+          
+          # Load image on Dokku server and deploy
+          ssh dokku@${{ secrets.DOKKU_ADDR }} "
+            docker load -i /tmp/${{ matrix.service }}.tar
+            dokku git:from-image ${{ matrix.dokku-app }} ${{ matrix.service }}:latest
+            rm /tmp/${{ matrix.service }}.tar
+          "
+
+      - name: Disconnect VPN
+        if: always()
+        run: |
+          echo "d myvpn" | sudo tee /var/run/xl2tpd/l2tp-control
+          sudo ipsec down myvpn
+
+      - name: Notify Deployment Success
+        if: success()
+        run: echo "🚀 Successfully deployed ${{ matrix.service }} to Dokku!"
