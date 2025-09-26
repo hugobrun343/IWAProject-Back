@@ -229,8 +229,12 @@ jobs:
         run: |
           echo "🚀 Deploying ${{ matrix.service }} from Docker Hub to ${{ matrix.dokku-app }}"
           
-          # Deploy directly from Docker Hub using commit SHA tag
-          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-${{ github.sha }}"
+          # Get first 7 characters of SHA
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "Using short SHA: $SHORT_SHA"
+          
+          # Deploy directly from Docker Hub using 7-character SHA tag
+          ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ${{ secrets.DOCKERHUB_USERNAME }}/iwaproject:${{ matrix.service }}-$SHORT_SHA"
 
       - name: Disconnect VPN
         if: always()
