@@ -92,21 +92,5 @@ class ApplicationServiceTest {
         
         // Then
         assertFalse(result);
-    }
-
-    @Test
-    void processApplication_ExpectedToFail_IncorrectAssertion() {
-        // This test is intentionally designed to fail
-        // Given
-        String applicationData = "test data";
-        
-        // When
-        String result = applicationService.processApplication(applicationData);
-        
-        // Then
-        // This assertion is wrong - we expect "TEST DATA" but assert it should be "wrong expectation"
-        assertEquals("wrong expectation", result, "This test should fail because we expect incorrect result");
-    }
-
-    
+    }    
 }
