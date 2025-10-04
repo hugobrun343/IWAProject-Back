@@ -53,21 +53,23 @@ function Test-Service {
     
     try {
         $exitCode = 0
+        $outputFile = "maven-output.log"
+        
         switch ($TestType) {
             "unit" {
-                & .\mvnw.cmd clean test -q
+                & .\mvnw.cmd clean test -q 2>&1 | Tee-Object -FilePath $outputFile
                 $exitCode = $LASTEXITCODE
             }
             "integration" {
-                & .\mvnw.cmd clean verify -Pintegration-tests -q
+                & .\mvnw.cmd clean verify -Pintegration-tests -q 2>&1 | Tee-Object -FilePath $outputFile
                 $exitCode = $LASTEXITCODE
             }
             "all" {
-                & .\mvnw.cmd clean verify -Pall-tests -q
+                & .\mvnw.cmd clean verify -Pall-tests -q 2>&1 | Tee-Object -FilePath $outputFile
                 $exitCode = $LASTEXITCODE
             }
             "quality" {
-                & .\mvnw.cmd clean verify -Pquality -q
+                & .\mvnw.cmd clean verify -Pquality -q 2>&1 | Tee-Object -FilePath $outputFile
                 $exitCode = $LASTEXITCODE
             }
             default {
@@ -78,6 +80,21 @@ function Test-Service {
         
         Write-Host "Maven exit code for $ServiceName`: $exitCode" -ForegroundColor DarkGray
         
+        # Additional verification using surefire reports
+        $surefireDir = "target\surefire-reports"
+        if (Test-Path $surefireDir) {
+            $testStats = Get-TestStats -SurefirePath $surefireDir
+            $hasFailures = $testStats.Failures -gt 0 -or $testStats.Errors -gt 0
+            
+            if ($exitCode -eq 0 -and -not $hasFailures) {
+                Write-Success "$ServiceName tests passed ($($testStats.Tests) tests)"
+                return $true
+            } elseif ($hasFailures) {
+                Write-Error "$ServiceName tests failed ($($testStats.Failures) failures, $($testStats.Errors) errors)"
+                return $false
+            }
+        }
+        
         if ($exitCode -eq 0) {
             Write-Success "$ServiceName tests passed"
             return $true
@@ -86,9 +103,87 @@ function Test-Service {
             return $false
         }
     }
+    catch {
+        Write-Error "Exception running tests for $ServiceName`: $_"
+        return $false
+    }
     finally {
+        # Clean up temp files
+        if (Test-Path "maven-output.log") {
+            Remove-Item "maven-output.log" -ErrorAction SilentlyContinue
+        }
         Pop-Location
     }
+}
+
+# Function to extract coverage from JaCoCo report
+function Get-CoverageFromJacoco {
+    param([string]$ServicePath)
+    
+    # Try different possible paths for JaCoCo reports
+    $possiblePaths = @(
+        "$ServicePath\target\site\jacoco\index.html",
+        "$ServicePath\target\jacoco-report\index.html",
+        "$ServicePath\target\reports\jacoco\index.html"
+    )
+    
+    foreach ($jacocoPath in $possiblePaths) {
+        if (Test-Path $jacocoPath) {
+            try {
+                $Content = Get-Content $jacocoPath -Raw -Encoding UTF8
+                # Look for Total row in tfoot with percentage
+                if ($Content -match '<tfoot>.*?<td[^>]*>Total</td>.*?<td[^>]*>(\d+)[^>]*%</td>') {
+                    return $Matches[1] + "%"
+                }
+                # Alternative simpler pattern
+                if ($Content -match 'Total.*?(\d+).*?%') {
+                    return $Matches[1] + "%"
+                }
+                # Look for first percentage in the HTML
+                if ($Content -match '(\d+)\s*%') {
+                    return $Matches[1] + "%"
+                }
+            } catch {
+                Write-Warning "Error reading coverage from $jacocoPath`: $_"
+            }
+        }
+    }
+    
+    # Try to check if jacoco.exec file exists (indicates coverage was collected)
+    $execFile = "$ServicePath\target\jacoco.exec"
+    if (Test-Path $execFile) {
+        return "Collected*"
+    }
+    
+    return "N/A"
+}
+
+# Function to get test statistics from surefire reports
+function Get-TestStats {
+    param([string]$SurefirePath)
+    
+    if (-not (Test-Path $SurefirePath)) {
+        return @{ Tests = 0; Failures = 0; Errors = 0; Skipped = 0 }
+    }
+    
+    $stats = @{ Tests = 0; Failures = 0; Errors = 0; Skipped = 0 }
+    
+    try {
+        $xmlFiles = Get-ChildItem -Path $SurefirePath -Filter "TEST-*.xml" -ErrorAction SilentlyContinue
+        foreach ($xmlFile in $xmlFiles) {
+            [xml]$xml = Get-Content $xmlFile.FullName -Encoding UTF8
+            if ($xml.testsuite) {
+                $stats.Tests += [int]$xml.testsuite.tests
+                $stats.Failures += [int]$xml.testsuite.failures
+                $stats.Errors += [int]$xml.testsuite.errors
+                $stats.Skipped += [int]$xml.testsuite.skipped
+            }
+        }
+    } catch {
+        Write-Warning "Error reading test stats from $SurefirePath`: $_"
+    }
+    
+    return $stats
 }
 
 # Function to generate test report
@@ -102,39 +197,68 @@ function New-TestReport {
     Write-Info "Generating test report..."
     
     $Report = @"
-# Test Report - $(Get-Date)
+# Test Report - $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 
-## Test Results
+## Test Type: $TestType
 
-| Service | Status | Coverage |
-|---------|--------|----------|
+## Test Results Summary
+- **Total Services**: $($Services.Count)
+- **Passed**: $($PassedServices.Count)
+- **Failed**: $($FailedServices.Count)
+
+## Detailed Results
+
+| Service | Status | Tests | Failures | Errors | Coverage |
+|---------|--------|-------|----------|--------|----------|
 "@
     
     foreach ($Service in $Services) {
         $JacocoPath = "$Service\target\site\jacoco\index.html"
         $SurefirePath = "$Service\target\surefire-reports"
         
-        if (Test-Path $JacocoPath) {
-            # Extract coverage percentage (simplified approach)
-            $Coverage = "N/A"
-            try {
-                $Content = Get-Content $JacocoPath -Raw
-                if ($Content -match '(\d+)%') {
-                    $Coverage = $Matches[1] + "%"
-                }
-            } catch {
-                $Coverage = "N/A"
-            }
-            $Status = if ($Service -in $PassedServices) { "✅" } else { "❌" }
-            $Report += "`n| $Service | $Status | $Coverage |"
-        } elseif (Test-Path $SurefirePath) {
-            $Status = if ($Service -in $PassedServices) { "✅" } else { "❌" }
-            $Report += "`n| $Service | $Status | N/A |"
-        } else {
-            $Report += "`n| $Service | ❌ | N/A |"
-        }
+        # Determine status with ASCII characters for better compatibility
+        $Status = if ($Service -in $PassedServices) { "PASS" } else { "FAIL" }
+        $StatusIcon = if ($Service -in $PassedServices) { "+" } else { "-" }
+        
+        # Get test statistics
+        $stats = Get-TestStats -SurefirePath $SurefirePath
+        $testInfo = "$($stats.Tests)"
+        $failureInfo = "$($stats.Failures)"
+        $errorInfo = "$($stats.Errors)"
+        
+        # Get coverage - pass the service path instead of specific file
+        $Coverage = Get-CoverageFromJacoco -ServicePath $Service
+        
+        # Add row to report
+        $StatusDisplay = "$StatusIcon $Status"
+        $Report += "`n| $Service | $StatusDisplay | $testInfo | $failureInfo | $errorInfo | $Coverage |"
     }
     
+    # Add footer with details
+    $PassedList = if ($PassedServices.Count -gt 0) { $PassedServices | ForEach-Object { "- $_" } } else { "- None" }
+    $FailedList = if ($FailedServices.Count -gt 0) { $FailedServices | ForEach-Object { "- $_" } } else { "- None" }
+    
+    $Report += @"
+
+## Test Execution Details
+
+### Passed Services
+$($PassedList -join "`n")
+
+### Failed Services
+$($FailedList -join "`n")
+
+## Notes
+- **Coverage**: 
+  - N/A = JaCoCo not configured or no report generated
+  - Collected* = Coverage data collected but report not generated
+  - Percentage = Actual coverage percentage from JaCoCo report
+- **Status**: + PASS = All tests passed, - FAIL = Some tests failed
+
+Generated on $(Get-Date -Format "yyyy-MM-dd HH:mm:ss") using PowerShell test runner
+"@
+    
+    # Write report with UTF8 encoding
     $Report | Out-File -FilePath "test-report.md" -Encoding UTF8
     Write-Success "Test report generated: test-report.md"
 }
@@ -153,10 +277,8 @@ function Main {
             # Write-Host "Test result for $Service`: $testResult" -ForegroundColor DarkGray
             if ($testResult -eq $true) {
                 $PassedServices += $Service
-                Write-Host "Added $Service to passed services. Current passed count: $($PassedServices.Count)" -ForegroundColor DarkGray
             } else {
                 $FailedServices += $Service
-                Write-Host "Added $Service to failed services. Current failed count: $($FailedServices.Count)" -ForegroundColor DarkGray
             }
         } else {
             Write-Warning "Service directory $Service not found, skipping..."
