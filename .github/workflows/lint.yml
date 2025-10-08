@@ -7,12 +7,12 @@ on:
     branches: [main, dev]
 
 jobs:
-  build-check:
-    name: Build ${{ matrix.service }}
+  lint:
+    name: Lint ${{ matrix.service }}
     runs-on: ubuntu-latest
     
     strategy:
-      fail-fast: true  # Stop all jobs if one fails
+      fail-fast: false  # Continue même si un service échoue pour voir tous les problèmes
       matrix:
         service:
           - Gateway-Service
@@ -48,10 +48,22 @@ jobs:
           cd ${{ matrix.service }}
           chmod +x mvnw
       
-      - name: Verify Maven compilation
+      - name: Compile
         run: |
           cd ${{ matrix.service }}
-          echo "🔨 Compiling ${{ matrix.service }}..."
+          echo "🔨 Compiling..."
           ./mvnw clean compile -q
       
-
+      - name: Run Checkstyle
+        run: |
+          cd ${{ matrix.service }}
+          echo "🔍 Running Checkstyle..."
+          ./mvnw checkstyle:check || echo "⚠️ Checkstyle warnings found (not blocking)"
+      
+      - name: Upload checkstyle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/checkstyle-result.xml
+          retention-days: 7
