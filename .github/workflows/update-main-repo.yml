@@ -1,13 +1,18 @@
-name: Update Main Repo from Back
+name: Update Main Repo
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
+    branches: [main]
 
 jobs:
   update-main-repo:
+    name: Update Main Repo from Back
     runs-on: ubuntu-latest
+    # Only run if test workflow succeeded and on main branch
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Set up Git config
@@ -28,16 +33,21 @@ jobs:
           git submodule sync
           git submodule update --init --recursive
 
-          # Update back submodule to latest main
-          cd back
+      - name: Update back submodule to latest main
+        run: |
+          cd IWAProject/back
           git fetch origin main
           git checkout origin/main
           cd ..
 
           git add back
-          git commit -m "chore: update back submodule to latest main" || echo "No changes to commit"
-          git push origin main
+          git diff-index --quiet HEAD || git commit -m "chore: update back submodule to latest main [skip ci]"
 
-      - name: Notify Update Success
+      - name: Push changes to main repo
+        run: |
+          cd IWAProject
+          git push origin main || echo "No changes to push"
+
+      - name: Notify update success
         if: success()
-        run: echo "🚀 Successfully updated main repo with back changes!"
+        run: echo "✅ Successfully updated main repo with back changes!"

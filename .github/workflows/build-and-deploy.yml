@@ -1,10 +1,11 @@
-name: Build Docker Images and Deploy to Dokku
+name: Build and Deploy
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
+    branches: [main, dev]  # Temporairement ajouté dev pour tester (ATTENTION: déploiera aussi sur dev!)
 
 env:
   REGISTRY: ghcr.io
@@ -12,6 +13,8 @@ env:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    # Only run if the Test workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       matrix: ${{ steps.changes.outputs.matrix }}
     steps:
@@ -264,3 +267,4 @@ jobs:
       - name: Notify Deployment Success
         if: success()
         run: echo "🚀 Successfully deployed ${{ matrix.service }} to Dokku!"
+
