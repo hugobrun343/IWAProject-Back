@@ -5,7 +5,7 @@ on:
     workflows: ["Test"]
     types:
       - completed
-    branches: [main, dev]  # Temporairement ajouté dev pour tester (ATTENTION: déploiera aussi sur dev!)
+    branches: [main, dev]
 
 env:
   REGISTRY: ghcr.io
@@ -13,7 +13,6 @@ env:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
-    # Only run if the Test workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       matrix: ${{ steps.changes.outputs.matrix }}
@@ -26,11 +25,9 @@ jobs:
       - name: Detect changed services
         id: changes
         run: |
-          # Get list of changed files
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           echo "Changed files: $CHANGED_FILES"
           
-          # Define services mapping (["NOM_DOSSIER"]="nom-service:nom-app-dokku")
           declare -A SERVICES=(
             ["Gateway-Service"]="gateway:homeguard",
             ["Announcement-Service"]="announcement:homeguard-announcement",
@@ -44,7 +41,6 @@ jobs:
             ["User-Service"]="user:homeguard-user",
           )
           
-          # Build matrix for changed services
           MATRIX='{"include":[]}'
           
           for folder in "${!SERVICES[@]}"; do
@@ -52,14 +48,12 @@ jobs:
               IFS=':' read -r service dokku_app <<< "${SERVICES[$folder]}"
               echo "✅ $folder changed - will deploy $service to $dokku_app"
               
-              # Add to matrix
               MATRIX=$(echo "$MATRIX" | jq --arg folder "$folder" --arg service "$service" --arg dokku_app "$dokku_app" '.include += [{"folder": $folder, "service": $service, "dokku-app": $dokku_app}]')
             else
               echo "⏭️ $folder unchanged - skipping"
             fi
           done
           
-          # Output matrix without extra spaces
           echo "matrix<<EOF" >> $GITHUB_OUTPUT
           echo "$MATRIX" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -73,7 +67,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Skip job if no services changed
     if: needs.detect-changes.outputs.matrix != '{"include":[]}'
     outputs:
       short-sha: ${{ steps.sha.outputs.short_sha }}
@@ -135,7 +128,6 @@ jobs:
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     permissions:
       contents: read
-    # Skip job if no services changed
     if: needs.detect-changes.outputs.matrix != '{"include":[]}'
 
     steps:
@@ -251,11 +243,9 @@ jobs:
         run: |
           echo "🚀 Deploying ${{ matrix.service }} from GitHub Container Registry to ${{ matrix.dokku-app }}"
           
-          # Use the same short SHA from build step
           SHORT_SHA="${{ needs.build-and-push.outputs.short-sha }}"
           echo "Using short SHA: $SHORT_SHA"
           
-          # Deploy using 7-character SHA tag
           ssh dokku@${{ secrets.DOKKU_ADDR }} "git:from-image ${{ matrix.dokku-app }} ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}:$SHORT_SHA"
 
       - name: Disconnect VPN
