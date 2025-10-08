@@ -5,7 +5,7 @@ on:
     workflows: ["Lint"]
     types:
       - completed
-    branches: [main, dev, '**']
+    branches: [main]
 
 jobs:
   test:
@@ -26,9 +26,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
-      - name: Set up Docker Buildx (for Testcontainers)
-        uses: docker/setup-buildx-action@v3
-      
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -36,18 +33,13 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       
-      - name: Cache Docker layers (for Testcontainers)
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-      
-      - name: Verify Docker is running
+      - name: Start test databases
         run: |
-          docker version
-          docker ps
+          echo "🗄️ Starting test databases..."
+          docker-compose -f docker-compose.test.yml up -d --wait
+          
+          echo "✅ All databases are healthy!"
+          docker-compose -f docker-compose.test.yml ps
       
       - name: Make test script executable
         run: chmod +x ./run-all-tests.sh
@@ -56,16 +48,11 @@ jobs:
         run: |
           echo "🧪 Running unit tests..."
           ./run-all-tests.sh unit
-        env:
-          TESTCONTAINERS_REUSE_ENABLE: false
       
-      - name: Run integration tests with Testcontainers
+      - name: Run integration tests
         run: |
-          echo "🔗 Running integration tests with PostgreSQL via Testcontainers..."
+          echo "🔗 Running integration tests with test databases..."
           ./run-all-tests.sh integration
-        env:
-          TESTCONTAINERS_REUSE_ENABLE: false
-          TESTCONTAINERS_RYUK_DISABLED: false
       
       - name: Upload test reports
         if: always()
@@ -87,29 +74,8 @@ jobs:
             */target/site/jacoco/
           retention-days: 30
       
-      - name: Comment test results on PR
-        if: github.event.workflow_run.event == 'pull_request' && always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let report = '## 🧪 Test Results\n\n';
-            
-            try {
-              const testReport = fs.readFileSync('test-report.md', 'utf8');
-              report += testReport;
-            } catch (error) {
-              report += '⚠️ Test report not found';
-            }
-            
-            // Find the PR number from the workflow run
-            const pr = github.event.workflow_run.pull_requests[0];
-            if (pr) {
-              github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: report
-              });
-            }
-
+      - name: Stop test databases
+        if: always()
+        run: |
+          echo "🛑 Stopping test databases..."
+          docker-compose -f docker-compose.test.yml down -v

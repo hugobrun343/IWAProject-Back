@@ -5,7 +5,7 @@ on:
     workflows: ["Test"]
     types:
       - completed
-    branches: [main, dev]
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -197,7 +197,6 @@ jobs:
 
           echo "Starting VPN connection..."
           
-          # Start IPSec with timeout
           timeout 30 sudo ipsec up myvpn || {
               echo "❌ IPSec connection failed or timeout"
               echo "Debug info:"
@@ -207,7 +206,6 @@ jobs:
           
           echo "c myvpn" | sudo tee /var/run/xl2tpd/l2tp-control
 
-          # Wait for VPN with timeout (max 60 seconds)
           TIMEOUT=60
           COUNTER=0
           while ! ip addr show ppp0 | grep -q "inet "; do
@@ -257,4 +255,3 @@ jobs:
       - name: Notify Deployment Success
         if: success()
         run: echo "🚀 Successfully deployed ${{ matrix.service }} to Dokku!"
-
