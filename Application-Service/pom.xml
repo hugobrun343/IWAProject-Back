@@ -29,7 +29,7 @@
     <properties>
         <java.version>21</java.version>
         <jacoco.version>0.8.12</jacoco.version>
-        <jacoco.coverage.minimum>0.70</jacoco.coverage.minimum>
+        <jacoco.coverage.minimum>0.80</jacoco.coverage.minimum>
         <sonar.coverage.exclusions>
             **/config/**,
             **/dto/**,
