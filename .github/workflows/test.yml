@@ -41,10 +41,10 @@ jobs:
       - name: Start test databases
         run: |
           echo "🗄️ Starting test databases..."
-          docker-compose -f docker-compose.test.yml up -d --wait
+          docker compose -f docker-compose.test.yml up -d --wait
           
           echo "✅ All databases are healthy!"
-          docker-compose -f docker-compose.test.yml ps
+          docker compose -f docker-compose.test.yml ps
       
       - name: Make test script executable
         run: chmod +x ./run-all-tests.sh
@@ -83,4 +83,4 @@ jobs:
         if: always()
         run: |
           echo "🛑 Stopping test databases..."
-          docker-compose -f docker-compose.test.yml down -v
+          docker compose -f docker-compose.test.yml down -v
