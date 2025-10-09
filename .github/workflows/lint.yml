@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
 
+run-name: Lint - ${{ github.event.head_commit.message }}
+
 jobs:
   lint:
     name: Lint ${{ matrix.service }}
