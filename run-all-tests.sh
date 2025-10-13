@@ -24,10 +24,11 @@ SERVICES=(
     "Application-Service"
     "Chat-Service"
     "Favorite-Service"
-    "Log-Service"
     "Payment-Service"
     "Rating-Service"
 )
+
+# Log-Service uses ELK stack (no database tests needed)
 
 # Function to print colored output
 print_status() {

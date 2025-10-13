@@ -95,22 +95,82 @@ services:
     networks:
       - iwa-network
 
-  log-postgres:
-    image: postgres:15-alpine
-    container_name: log-postgres
-    environment:
-      POSTGRES_DB: log_db
-      POSTGRES_USER: log_user
-      POSTGRES_PASSWORD: log_password
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: zookeeper
     ports:
-      - "5437:5432"
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     volumes:
-      - log_data:/var/lib/postgresql/data
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U log_user -d log_db"]
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+    networks:
+      - iwa-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - iwa-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - iwa-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     networks:
       - iwa-network
 
@@ -197,8 +257,8 @@ services:
 
   announcement-service:
     build:
-      context: ./Announcement-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Announcement-Service/Dockerfile
     container_name: announcement-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -218,8 +278,8 @@ services:
 
   application-service:
     build:
-      context: ./Application-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Application-Service/Dockerfile
     container_name: application-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -239,8 +299,8 @@ services:
 
   chat-service:
     build:
-      context: ./Chat-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Chat-Service/Dockerfile
     container_name: chat-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -260,8 +320,8 @@ services:
 
   favorite-service:
     build:
-      context: ./Favorite-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Favorite-Service/Dockerfile
     container_name: favorite-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -281,29 +341,31 @@ services:
 
   log-service:
     build:
-      context: ./Log-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Log-Service/Dockerfile
     container_name: log-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://log-postgres:5432/log_db
-      SPRING_DATASOURCE_USERNAME: log_user
-      SPRING_DATASOURCE_PASSWORD: log_password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: log-service-consumer
+      KAFKA_LOGS_TOPIC: microservices-logs
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       SERVER_PORT: 8086
     ports:
       - "8086:8086"
     restart: unless-stopped
     depends_on:
-      log-postgres:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     networks:
       - iwa-network
 
   payment-service:
     build:
-      context: ./Payment-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Payment-Service/Dockerfile
     container_name: payment-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -323,8 +385,8 @@ services:
 
   rating-service:
     build:
-      context: ./Rating-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Rating-Service/Dockerfile
     container_name: rating-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -345,7 +407,7 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: User-Service/Dockerfile
+      dockerfile: ./User-Service/Dockerfile
     container_name: user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -365,8 +427,8 @@ services:
 
   gateway-service:
     build:
-      context: ./Gateway-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Gateway-Service/Dockerfile
     container_name: gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -395,7 +457,10 @@ volumes:
   chat_data:
   favorite_data:
   keycloak_data:
-  log_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
+  elasticsearch_data:
   payment_data:
   rating_data:
   user_data:
