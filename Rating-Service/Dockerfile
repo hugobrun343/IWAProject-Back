@@ -1,20 +1,21 @@
 FROM eclipse-temurin:21-jdk AS build
 
-WORKDIR /app
+WORKDIR /workspace
 
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-COPY src src
+# Copy parent POM
+COPY pom.xml ./
 
+# Copy service files
+COPY Rating-Service ./Rating-Service/
+
+# Build
+WORKDIR /workspace/Rating-Service
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests package
 
+# Runtime
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-ENV PORT=8080
-
-COPY --from=build /app/target/*.jar app.jar
-
+COPY --from=build /workspace/Rating-Service/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

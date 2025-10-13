@@ -92,24 +92,6 @@ services:
       timeout: 5s
       retries: 5
 
-  log-db-test:
-    build:
-      context: ./_Databases/test
-      dockerfile: Dockerfile.log-postgres-test
-    environment:
-      POSTGRES_DB: log_test_db
-      POSTGRES_USER: log_test
-      POSTGRES_PASSWORD: log_test_pass
-    ports:
-      - "5438:5432"
-    volumes:
-      - log_test_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U log_test -d log_test_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   payment-db-test:
     build:
       context: ./_Databases/test
@@ -187,10 +169,6 @@ services:
       FAVORITE_DB_USERNAME: favorite_test
       FAVORITE_DB_PASSWORD: favorite_test_pass
       
-      LOG_DB_URL: jdbc:postgresql://log-db-test:5432/log_test_db
-      LOG_DB_USERNAME: log_test
-      LOG_DB_PASSWORD: log_test_pass
-      
       PAYMENT_DB_URL: jdbc:postgresql://payment-db-test:5432/payment_test_db
       PAYMENT_DB_USERNAME: payment_test
       PAYMENT_DB_PASSWORD: payment_test_pass
@@ -212,8 +190,6 @@ services:
         condition: service_healthy
       favorite-db-test:
         condition: service_healthy
-      log-db-test:
-        condition: service_healthy
       payment-db-test:
         condition: service_healthy
       rating-db-test:
@@ -228,7 +204,6 @@ volumes:
   application_test_data:
   chat_test_data:
   favorite_test_data:
-  log_test_data:
   payment_test_data:
   rating_test_data:
   maven_cache:
