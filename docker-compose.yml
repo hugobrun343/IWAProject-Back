@@ -344,8 +344,8 @@ services:
 
   user-service:
     build:
-      context: ./User-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: User-Service/Dockerfile
     container_name: user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker

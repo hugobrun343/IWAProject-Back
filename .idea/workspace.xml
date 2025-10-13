@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="5e439861-336e-46bb-b8eb-407d09729c8e" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/controllers/UserController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/dto/LanguageDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/dto/SpecialisationDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/dto/UserImageDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/dto/UserLanguageDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/dto/UserSpecialisationDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/entities/Specialisation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/entities/UserImage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/entities/UserLanguage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/entities/UserSpecialisation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/event/UserCreatedEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/event/UserUpdatedEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/repositories/LanguageRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/repositories/SpecialisationRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/repositories/UserImageRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/repositories/UserLanguageRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/repositories/UserSpecialisationRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/services/KafkaConsumerService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/services/KafkaProducerService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/services/LanguageService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/services/SpecialisationService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/User-Service/src/main/java/com/iwaproject/user/services/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Keycloak-Service/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Keycloak-Service/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/User-Service/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/User-Service/pom.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "axel-tpt"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "git@github.com:hugobrun343/IWAProject-Back.git",
+    "accountId": "45e440b3-2681-4c5f-8035-c27eb6eda6ad"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 7
+}]]></component>
+  <component name="ProjectId" id="33yMiHA5qCIo7UBH0jvvDyDirey" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "feat/user",
+    "kotlin-language-version-configured": "true"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5e439861-336e-46bb-b8eb-407d09729c8e" name="Changes" comment="" />
+      <created>1760284988286</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760284988286</updated>
+    </task>
+    <servers />
+  </component>
+</project>
