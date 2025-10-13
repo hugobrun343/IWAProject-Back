@@ -36,9 +36,10 @@ public class LogConsumer {
             // Store in Elasticsearch
             logService.saveLog(logEntry);
             
-            logger.debug("Log saved: [{}] {} - {}", 
+            logger.debug("Log saved: [{}] {} ({}) - {}", 
                 logEntry.getLevel(), 
-                logEntry.getService(), 
+                logEntry.getService(),
+                logEntry.getLogger(), 
                 logEntry.getMessage());
                 
         } catch (Exception e) {

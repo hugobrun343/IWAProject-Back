@@ -31,6 +31,12 @@ public class LogEntry {
     @Field(type = FieldType.Text)
     private String exception;
 
+    @Field(type = FieldType.Keyword)
+    private String logger;
+
+    @Field(type = FieldType.Keyword)
+    private String thread;
+
     @Field(type = FieldType.Object)
     private Object metadata;
 
@@ -85,6 +91,22 @@ public class LogEntry {
 
     public void setException(String exception) {
         this.exception = exception;
+    }
+
+    public String getLogger() {
+        return logger;
+    }
+
+    public void setLogger(String logger) {
+        this.logger = logger;
+    }
+
+    public String getThread() {
+        return thread;
+    }
+
+    public void setThread(String thread) {
+        this.thread = thread;
     }
 
     public Object getMetadata() {
