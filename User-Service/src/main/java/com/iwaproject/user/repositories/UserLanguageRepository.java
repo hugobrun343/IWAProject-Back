@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserLanguageRepository extends JpaRepository<UserLanguage, String> {
-    Optional<List<UserLanguage>> findByUserId(Long userId);
+public interface UserLanguageRepository extends JpaRepository<UserLanguage, Long> {
+    Optional<List<UserLanguage>> findByUsername(String username);
+    void deleteByUsername(String username);
 }

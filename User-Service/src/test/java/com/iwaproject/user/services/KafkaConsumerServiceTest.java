@@ -34,6 +34,9 @@ class KafkaConsumerServiceTest {
     @Mock
     private KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Mock
+    private KafkaLogService kafkaLogService;
+
     @InjectMocks
     private KafkaConsumerService kafkaConsumerService;
 
@@ -83,11 +86,17 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
+    void consumeSpecialisations_invalidMessage_noSend() {
+        kafkaConsumerService.consumeSpecialisations("onlyOnePart");
+        verify(kafkaTemplate, never()).send(anyString(), any());
+    }
+
+    @Test
     void consumeUserImage_validMessage_sendsImage() {
-        when(userService.getUserImage(42L)).thenReturn(new UserImageDTO("base64data"));
+        when(userService.getUserImage("test")).thenReturn(new UserImageDTO("base64data"));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserImage("corr:replyTopic:42");
+        kafkaConsumerService.consumeUserImage("corr:replyTopic:test");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -100,18 +109,19 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
-    void consumeUserImage_invalidUserId_noSend() {
-        kafkaConsumerService.consumeUserImage("corr:topic:not-a-number");
+    void consumeUserImage_invalidMessage_noSend() {
+        // missing username (only 2 parts)
+        kafkaConsumerService.consumeUserImage("corr:topic");
         verify(kafkaTemplate, never()).send(anyString(), any());
     }
 
     @Test
     void consumeUserLanguages_validMessage_sendsUserLanguages() {
         UserLanguageDTO uld = new UserLanguageDTO(new LanguageDTO("German"));
-        when(userService.getUserLanguages(7L)).thenReturn(List.of(uld));
+        when(userService.getUserLanguages("test")).thenReturn(List.of(uld));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserLanguages("c1:rtopic:7");
+        kafkaConsumerService.consumeUserLanguages("c1:rtopic:test");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -124,12 +134,18 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
+    void consumeUserLanguages_invalidMessage_noSend() {
+        kafkaConsumerService.consumeUserLanguages("c1:rtopic");
+        verify(kafkaTemplate, never()).send(anyString(), any());
+    }
+
+    @Test
     void consumeUserSpecialisations_validMessage_sendsUserSpecialisations() {
         UserSpecialisationDTO usd = new UserSpecialisationDTO(new SpecialisationDTO("Derm"));
-        when(userService.getUserSpecialisations(9L)).thenReturn(List.of(usd));
+        when(userService.getUserSpecialisations("test")).thenReturn(List.of(usd));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserSpecialisations("cidX:replyX:9");
+        kafkaConsumerService.consumeUserSpecialisations("cidX:replyX:test");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -139,5 +155,11 @@ class KafkaConsumerServiceTest {
         String payload = String.valueOf(payloadCaptor.getValue());
         assertTrue(payload.startsWith("cidX:"));
         assertTrue(payload.contains("Derm"));
+    }
+
+    @Test
+    void consumeUserSpecialisations_invalidMessage_noSend() {
+        kafkaConsumerService.consumeUserSpecialisations("cidX:replyX");
+        verify(kafkaTemplate, never()).send(anyString(), any());
     }
 }

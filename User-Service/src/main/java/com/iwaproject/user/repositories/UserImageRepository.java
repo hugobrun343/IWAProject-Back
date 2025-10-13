@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UserImageRepository extends JpaRepository<UserImage, Integer> {
-    Optional<UserImage> findByUserId(Long userId);
+public interface UserImageRepository extends JpaRepository<UserImage, Long> {
+    Optional<UserImage> findByUsername(String username);
+    void deleteByUsername(String username);
 }

@@ -11,8 +11,8 @@ public class UserSpecialisation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "username", nullable = false)
+    private String username;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "specialisation_label", nullable = false)

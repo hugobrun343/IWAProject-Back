@@ -2,15 +2,22 @@ package com.iwaproject.user.keycloak;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.util.List;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class KeycloakUser {
     public String id;
-    public String username;
-    public String email;
-    public boolean enabled;
-    public List<String> requiredActions;
+    private String username;
+    private String email;
+    private String firstName;
+    private String lastName;
+    private String telephone;
+    private String localisation;
+    private String description;
+    private String photoProfil;
+    private Boolean verificationIdentite;
+    private String preferences;
+    private String dateInscription;
 }

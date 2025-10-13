@@ -3,15 +3,22 @@ package com.iwaproject.user.controllers;
 import com.iwaproject.user.entities.*;
 import com.iwaproject.user.keycloak.KeycloakUser;
 import com.iwaproject.user.services.*;
+import com.iwaproject.user.keycloak.KeycloakClientService;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 import com.iwaproject.user.dto.LanguageDTO;
 import com.iwaproject.user.dto.SpecialisationDTO;
 import com.iwaproject.user.dto.UserImageDTO;
 import com.iwaproject.user.dto.UserLanguageDTO;
+import com.iwaproject.user.dto.UserLanguagesResponseDTO;
 import com.iwaproject.user.dto.UserSpecialisationDTO;
 
 @RestController
@@ -21,42 +28,190 @@ public class UserController {
     private final LanguageService languageService;
     private final SpecialisationService specialisationService;
     private final UserService userService;
+    private final KafkaLogService kafkaLogService;
+    private final KeycloakClientService keycloakClientService;
+
+    private static final String LOGGER_NAME = "UserController";
 
     public UserController(LanguageService languageService,
                           SpecialisationService specialisationService,
-                          UserService userService) {
+                          UserService userService,
+                          KafkaLogService kafkaLogService,
+                          KeycloakClientService keycloakClientService) {
         this.languageService = languageService;
         this.specialisationService = specialisationService;
         this.userService = userService;
+        this.kafkaLogService = kafkaLogService;
+        this.keycloakClientService = keycloakClientService;
     }
 
+    // ==================== Public endpoints ====================
+
     @GetMapping("/languages")
-    public List<LanguageDTO> getAllLanguages() {
-        return languageService.getAllLanguages();
+    public ResponseEntity<List<LanguageDTO>> getAllLanguages() {
+        kafkaLogService.info(LOGGER_NAME, "GET /languages - Fetching all languages");
+        List<LanguageDTO> languages = languageService.getAllLanguages();
+        return ResponseEntity.ok(languages);
     }
 
     @GetMapping("/specialisations")
-    public List<SpecialisationDTO> getAllSpecialisations() {
-        return specialisationService.getAllSpecialisations();
+    public ResponseEntity<List<SpecialisationDTO>> getAllSpecialisations() {
+        kafkaLogService.info(LOGGER_NAME, "GET /specialisations - Fetching all specialisations");
+        List<SpecialisationDTO> specialisations = specialisationService.getAllSpecialisations();
+        return ResponseEntity.ok(specialisations);
     }
+
+    // ==================== Profile (via token - sub) ====================
+
+    @GetMapping("/users/me")
+    public ResponseEntity<KeycloakUser> getMyProfile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.error(LOGGER_NAME, "Error extracting username from token: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "GET /users/me - User: " + username);
+
+    KeycloakUser user = userService.getUserDataByUsername(username);
+        return ResponseEntity.ok(user);
+    }
+
+    @PatchMapping("/users/me")
+    public ResponseEntity<KeycloakUser> updateMyProfile(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody Map<String, Object> updates) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for PATCH /users/me");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "PATCH /users/me - User: " + username + ", Updates: " + updates);
+        KeycloakUser updatedUser = userService.updateUserProfile(username, updates);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PostMapping(value = "/users/me/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserImageDTO> uploadMyPhoto(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("file") MultipartFile file) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for POST /users/me/photo");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "POST /users/me/photo - User: " + username + ", File: " + file.getOriginalFilename());
+        UserImageDTO uploadedImage;
+        try {
+            uploadedImage = userService.uploadUserPhoto(username, file);
+        } catch (Exception e) {
+            kafkaLogService.error(LOGGER_NAME, "Error uploading photo for user " + username + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(uploadedImage);
+    }
+
+    @DeleteMapping("/users/me/photo")
+    public ResponseEntity<Void> deleteMyPhoto(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for DELETE /users/me/photo");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "DELETE /users/me/photo - User: " + username);
+        userService.deleteUserPhoto(username);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== Languages ====================
+
+    @GetMapping("/users/me/languages")
+    public ResponseEntity<List<UserLanguagesResponseDTO>> getMyLanguages(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for GET /users/me/languages");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "GET /users/me/languages - User: " + username);
+        List<UserLanguageDTO> languages = userService.getUserLanguagesByUsername(username);
+        List<String> labels = languages.stream().map(l -> l.getLanguage().getLabel()).toList();
+        return ResponseEntity.ok(List.of(new UserLanguagesResponseDTO(labels)));
+    }
+
+    @PutMapping("/users/me/languages")
+    public ResponseEntity<List<UserLanguagesResponseDTO>> replaceMyLanguages(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody Map<String, List<String>> body) {
+        List<String> languageLabels = body.get("langue_labels");
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for PUT /users/me/languages");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "PUT /users/me/languages - User: " + username + ", languageLabels: " + languageLabels);
+        List<UserLanguageDTO> updatedLanguages = userService.replaceUserLanguages(username, languageLabels);
+        List<String> labels = updatedLanguages.stream().map(l -> l.getLanguage().getLabel()).toList();
+        return ResponseEntity.ok(List.of(new UserLanguagesResponseDTO(labels)));
+    }
+
+    // ==================== Specialisations ====================
+
+    @GetMapping("/users/me/specialisations")
+    public ResponseEntity<List<UserSpecialisationDTO>> getMySpecialisations(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for GET /users/me/specialisations");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "GET /users/me/specialisations - User: " + username);
+        List<UserSpecialisationDTO> specialisations = userService.getUserSpecialisationsByUsername(username);
+        return ResponseEntity.ok(specialisations);
+    }
+
+    @PutMapping("/users/me/specialisations")
+    public ResponseEntity<List<UserSpecialisationDTO>> replaceMySpecialisations(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody Map<String, List<String>> body) {
+        List<String> specialisationLabels = body.get("specialisation_labels");
+        String username;
+        try {
+            username = extractUsernameFromAuthHeader(authorizationHeader);
+        } catch (Exception e) {
+            kafkaLogService.warn(LOGGER_NAME, "Unauthorized access: invalid or missing token for PUT /users/me/specialisations");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        kafkaLogService.info(LOGGER_NAME, "PUT /users/me/specialisations - User: " + username + ", specialisationLabels: " + specialisationLabels);
+        List<UserSpecialisationDTO> updatedSpecialisations = userService.replaceUserSpecialisations(username, specialisationLabels);
+        return ResponseEntity.ok(updatedSpecialisations);
+    }
+
+    // ==================== Public user profile ====================
 
     @GetMapping("/users/{id}")
-    public KeycloakUser getUserById(@PathVariable String id) {
-        return userService.getUserData(id);
+    public ResponseEntity<KeycloakUser> getUserById(@PathVariable String id) {
+        kafkaLogService.info(LOGGER_NAME, "GET /users/" + id + " - Fetching public profile");
+        KeycloakUser user = userService.getUserDataById(id);
+        return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/users/{id}/image")
-    public UserImageDTO getUserImage(@PathVariable Long id) {
-        return userService.getUserImage(id);
-    }
-
-    @GetMapping("/users/{id}/languages")
-    public List<UserLanguageDTO> getUserLanguages(@PathVariable Long id) {
-        return userService.getUserLanguages(id);
-    }
-
-    @GetMapping("/users/{id}/specialisations")
-    public List<UserSpecialisationDTO> getUserSpecialisations(@PathVariable Long id) {
-        return userService.getUserSpecialisations(id);
+    private String extractUsernameFromAuthHeader(String authorizationHeader) throws Exception {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new Exception("Missing or invalid Authorization header");
+        }
+        String token = authorizationHeader.substring("Bearer ".length());
+        return keycloakClientService.getUsernameFromToken(token);
     }
 }

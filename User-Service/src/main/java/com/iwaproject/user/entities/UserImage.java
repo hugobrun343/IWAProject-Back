@@ -12,8 +12,8 @@ public class UserImage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "username", nullable = false)
+    private String username;
 
     @Column(name = "image_base64", columnDefinition = "TEXT", nullable = false)
     private String imageBase64;

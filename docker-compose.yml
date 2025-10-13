@@ -416,11 +416,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: user_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8089
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LOGS_TOPIC: microservices-logs
     ports:
       - "8089:8089"
     restart: unless-stopped
     depends_on:
       user-postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - iwa-network
