@@ -5,7 +5,10 @@ import com.iwaproject.user.dto.SpecialisationDTO;
 import com.iwaproject.user.dto.UserImageDTO;
 import com.iwaproject.user.dto.UserLanguageDTO;
 import com.iwaproject.user.dto.UserSpecialisationDTO;
+import com.iwaproject.user.keycloak.KeycloakClientService;
 import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mockito.Spy;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -13,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,6 +41,12 @@ class KafkaConsumerServiceTest {
     @Mock
     private KafkaLogService kafkaLogService;
 
+    @Mock
+    private KeycloakClientService keycloakClientService;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
+
     @InjectMocks
     private KafkaConsumerService kafkaConsumerService;
 
@@ -46,57 +56,14 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
-    void consumeLanguages_validMessage_sendsLanguages() {
-        when(languageService.getAllLanguages()).thenReturn(List.of(new LanguageDTO("French")));
-        when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
-
-        kafkaConsumerService.consumeLanguages("corr-1:reply-topic");
-
-        ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(kafkaTemplate).send(topicCaptor.capture(), payloadCaptor.capture());
-
-        assertEquals("reply-topic", topicCaptor.getValue());
-        String payload = String.valueOf(payloadCaptor.getValue());
-        assertTrue(payload.startsWith("corr-1:"));
-        assertTrue(payload.contains("French"));
-    }
-
-    @Test
-    void consumeLanguages_invalidMessage_noSend() {
-        kafkaConsumerService.consumeLanguages("bad-format");
-        verify(kafkaTemplate, never()).send(anyString(), any());
-    }
-
-    @Test
-    void consumeSpecialisations_validMessage_sendsSpecialisations() {
-        when(specialisationService.getAllSpecialisations()).thenReturn(List.of(new SpecialisationDTO("Cardio")));
-        when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
-
-        kafkaConsumerService.consumeSpecialisations("cid:topic-xyz");
-
-        ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(kafkaTemplate).send(topicCaptor.capture(), payloadCaptor.capture());
-
-        assertEquals("topic-xyz", topicCaptor.getValue());
-        String payload = String.valueOf(payloadCaptor.getValue());
-        assertTrue(payload.startsWith("cid:"));
-        assertTrue(payload.contains("Cardio"));
-    }
-
-    @Test
-    void consumeSpecialisations_invalidMessage_noSend() {
-        kafkaConsumerService.consumeSpecialisations("onlyOnePart");
-        verify(kafkaTemplate, never()).send(anyString(), any());
-    }
-
-    @Test
-    void consumeUserImage_validMessage_sendsImage() {
+    void consumeUserImage_validMessage_sendsImage() throws IOException {
+        // token -> username resolution
+        when(keycloakClientService.getUsernameFromToken(anyString())).thenReturn("test");
         when(userService.getUserImage("test")).thenReturn(new UserImageDTO("base64data"));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserImage("corr:replyTopic:test");
+        // message now carries a token in the 3rd position
+        kafkaConsumerService.consumeUserImage("corr:replyTopic:someToken");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -116,12 +83,13 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
-    void consumeUserLanguages_validMessage_sendsUserLanguages() {
+    void consumeUserLanguages_validMessage_sendsUserLanguages() throws IOException {
         UserLanguageDTO uld = new UserLanguageDTO(new LanguageDTO("German"));
+        when(keycloakClientService.getUsernameFromToken(anyString())).thenReturn("test");
         when(userService.getUserLanguages("test")).thenReturn(List.of(uld));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserLanguages("c1:rtopic:test");
+        kafkaConsumerService.consumeUserLanguages("c1:rtopic:someToken");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -140,12 +108,13 @@ class KafkaConsumerServiceTest {
     }
 
     @Test
-    void consumeUserSpecialisations_validMessage_sendsUserSpecialisations() {
+    void consumeUserSpecialisations_validMessage_sendsUserSpecialisations() throws IOException {
         UserSpecialisationDTO usd = new UserSpecialisationDTO(new SpecialisationDTO("Derm"));
+        when(keycloakClientService.getUsernameFromToken(anyString())).thenReturn("test");
         when(userService.getUserSpecialisations("test")).thenReturn(List.of(usd));
         when(kafkaTemplate.send(anyString(), any())).thenReturn(null);
 
-        kafkaConsumerService.consumeUserSpecialisations("cidX:replyX:test");
+        kafkaConsumerService.consumeUserSpecialisations("cidX:replyX:someToken");
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);

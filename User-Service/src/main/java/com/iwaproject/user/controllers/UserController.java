@@ -48,17 +48,18 @@ public class UserController {
     // ==================== Public endpoints ====================
 
     @GetMapping("/languages")
-    public ResponseEntity<List<LanguageDTO>> getAllLanguages() {
+    public ResponseEntity<Map<String, List<LanguageDTO>>> getAllLanguages() {
         kafkaLogService.info(LOGGER_NAME, "GET /languages - Fetching all languages");
         List<LanguageDTO> languages = languageService.getAllLanguages();
-        return ResponseEntity.ok(languages);
+        return ResponseEntity.ok(Map.of("languages", languages));
     }
 
     @GetMapping("/specialisations")
-    public ResponseEntity<List<SpecialisationDTO>> getAllSpecialisations() {
+    public ResponseEntity<Map<String, List<SpecialisationDTO>>> getAllSpecialisations() {
         kafkaLogService.info(LOGGER_NAME, "GET /specialisations - Fetching all specialisations");
         List<SpecialisationDTO> specialisations = specialisationService.getAllSpecialisations();
-        return ResponseEntity.ok(specialisations);
+        Map<String, List<SpecialisationDTO>> body = Map.of("specialisations", specialisations);
+        return ResponseEntity.ok(body);
     }
 
     // ==================== Profile (via token - sub) ====================

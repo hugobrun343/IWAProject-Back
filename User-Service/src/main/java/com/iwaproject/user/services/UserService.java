@@ -55,6 +55,15 @@ public class UserService {
         .orElse(null);
     }
 
+    public UserImageDTO uploadUserPhotoBase64(String username, String base64) {
+        UserImage userImage = userImageRepository.findByUsername(username)
+                .orElse(new UserImage());
+        userImage.setUsername(username);
+        userImage.setImageBase64(base64);
+        userImageRepository.save(userImage);
+        return new UserImageDTO(base64);
+    }
+
     public List<UserLanguageDTO> getUserLanguages(String username) {
     return userLanguageRepository.findByUsername(username)
         .orElseGet(List::of)
