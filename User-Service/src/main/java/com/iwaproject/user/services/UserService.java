@@ -82,11 +82,6 @@ public class UserService {
         .toList();
     }
 
-    public KeycloakUser getUserDataById(String keycloakUserId) {
-        UserRepresentation kcUser = keycloakClientService.getUserById(keycloakUserId);
-        return keycloakClientService.mapToKeycloakUser(kcUser);
-    }
-
     public KeycloakUser getUserDataByUsername(String username) {
         UserRepresentation kcUser = keycloakClientService.getUserByUsername(username);
         return keycloakClientService.mapToKeycloakUser(kcUser);

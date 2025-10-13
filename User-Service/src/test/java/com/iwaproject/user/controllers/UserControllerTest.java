@@ -82,7 +82,7 @@ class UserControllerTest {
     void getMyProfile_ok() throws Exception {
         given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
         KeycloakUser kcUser = new KeycloakUser(
-                "id-1","john","john@example.com","John","Doe",
+                "john","john@example.com","John","Doe",
                 null,null,null,null,null,null,null);
         given(userService.getUserDataByUsername("john")).willReturn(kcUser);
 
@@ -113,7 +113,7 @@ class UserControllerTest {
     void patchMyProfile_ok() throws Exception {
         given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
         KeycloakUser updated = new KeycloakUser(
-                "id-1","john","new@example.com","John","Doe",
+                "john","new@example.com","John","Doe",
                 null,null,null,null,null,null,null);
         given(userService.updateUserProfile(ArgumentMatchers.eq("john"), ArgumentMatchers.<Map<String,Object>>any())).willReturn(updated);
 
@@ -265,18 +265,5 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("specialisation_labels", List.of("Derm")))))
                 .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @DisplayName("GET /api/users/{id} returns public profile")
-    void getUserById_ok() throws Exception {
-        KeycloakUser kcUser = new KeycloakUser(
-                "id-42","alice","alice@example.com","Alice","Wonder",
-                null,null,null,null,null,null,null);
-        given(userService.getUserDataById("id-42")).willReturn(kcUser);
-
-        mockMvc.perform(get("/api/users/id-42"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username", is("alice")));
     }
 }

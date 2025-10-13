@@ -141,30 +141,6 @@ class UserServiceTest {
     // === Tests pour les méthodes Keycloak ===
 
     @Test
-    void getUserDataById_shouldReturnKeycloakUser() {
-        // Arrange
-        String userId = "user-id-123";
-        UserRepresentation kcUserRep = new UserRepresentation();
-        kcUserRep.setId(userId);
-        kcUserRep.setUsername("testuser");
-        KeycloakUser expectedUser = new KeycloakUser();
-        expectedUser.setId(userId);
-        expectedUser.setUsername("testuser");
-
-        when(keycloakClientService.getUserById(userId)).thenReturn(kcUserRep);
-        when(keycloakClientService.mapToKeycloakUser(kcUserRep)).thenReturn(expectedUser);
-
-        // Act
-        KeycloakUser result = userService.getUserDataById(userId);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(userId, result.getId());
-        assertEquals("testuser", result.getUsername());
-        verify(keycloakClientService).getUserById(userId);
-    }
-
-    @Test
     void updateUserProfile_shouldCallKeycloakService() {
         // Arrange
         String username = "testuser";

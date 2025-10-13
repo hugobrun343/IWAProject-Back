@@ -1,5 +1,6 @@
 package com.iwaproject.user.controllers;
 
+import com.iwaproject.user.dto.*;
 import com.iwaproject.user.entities.*;
 import com.iwaproject.user.keycloak.KeycloakUser;
 import com.iwaproject.user.services.*;
@@ -13,13 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
-
-import com.iwaproject.user.dto.LanguageDTO;
-import com.iwaproject.user.dto.SpecialisationDTO;
-import com.iwaproject.user.dto.UserImageDTO;
-import com.iwaproject.user.dto.UserLanguageDTO;
-import com.iwaproject.user.dto.UserLanguagesResponseDTO;
-import com.iwaproject.user.dto.UserSpecialisationDTO;
 
 @RestController
 @RequestMapping("/api")
@@ -65,7 +59,7 @@ public class UserController {
     // ==================== Profile (via token - sub) ====================
 
     @GetMapping("/users/me")
-    public ResponseEntity<KeycloakUser> getMyProfile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<PrivateUserDTO> getMyProfile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         String username;
         try {
             username = extractUsernameFromAuthHeader(authorizationHeader);
@@ -75,12 +69,26 @@ public class UserController {
         }
         kafkaLogService.info(LOGGER_NAME, "GET /users/me - User: " + username);
 
-    KeycloakUser user = userService.getUserDataByUsername(username);
-        return ResponseEntity.ok(user);
+        KeycloakUser user = userService.getUserDataByUsername(username);
+        PrivateUserDTO privateUserDTO = new PrivateUserDTO(
+                user.getUsername(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getTelephone(),
+                user.getLocalisation(),
+                user.getDescription(),
+                user.getPhotoProfil(),
+                user.getVerificationIdentite(),
+                user.getPreferences(),
+                user.getDateInscription()
+        );
+        return ResponseEntity.ok(privateUserDTO);
+
     }
 
     @PatchMapping("/users/me")
-    public ResponseEntity<KeycloakUser> updateMyProfile(
+    public ResponseEntity<PrivateUserDTO> updateMyProfile(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody Map<String, Object> updates) {
         String username;
@@ -92,7 +100,20 @@ public class UserController {
         }
         kafkaLogService.info(LOGGER_NAME, "PATCH /users/me - User: " + username + ", Updates: " + updates);
         KeycloakUser updatedUser = userService.updateUserProfile(username, updates);
-        return ResponseEntity.ok(updatedUser);
+        PrivateUserDTO privateUserDTO = new PrivateUserDTO(
+                updatedUser.getUsername(),
+                updatedUser.getEmail(),
+                updatedUser.getFirstName(),
+                updatedUser.getLastName(),
+                updatedUser.getTelephone(),
+                updatedUser.getLocalisation(),
+                updatedUser.getDescription(),
+                updatedUser.getPhotoProfil(),
+                updatedUser.getVerificationIdentite(),
+                updatedUser.getPreferences(),
+                updatedUser.getDateInscription()
+        );
+        return ResponseEntity.ok(privateUserDTO);
     }
 
     @PostMapping(value = "/users/me/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -201,11 +222,21 @@ public class UserController {
 
     // ==================== Public user profile ====================
 
-    @GetMapping("/users/{id}")
-    public ResponseEntity<KeycloakUser> getUserById(@PathVariable String id) {
-        kafkaLogService.info(LOGGER_NAME, "GET /users/" + id + " - Fetching public profile");
-        KeycloakUser user = userService.getUserDataById(id);
-        return ResponseEntity.ok(user);
+    @GetMapping("/users/{username}")
+    public ResponseEntity<PublicUserDTO> getUserByUsername(@PathVariable String username) {
+        kafkaLogService.info(LOGGER_NAME, "GET /users/" + username + " - Fetching public profile");
+        KeycloakUser user = userService.getUserDataByUsername(username);
+        PublicUserDTO publicUserDTO = new PublicUserDTO(
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getTelephone(),
+                user.getDescription(),
+                user.getPhotoProfil(),
+                user.getVerificationIdentite(),
+                user.getDateInscription()
+        );
+        return ResponseEntity.ok(publicUserDTO);
     }
 
     private String extractUsernameFromAuthHeader(String authorizationHeader) throws Exception {

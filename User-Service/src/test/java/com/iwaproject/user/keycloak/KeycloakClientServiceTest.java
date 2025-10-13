@@ -119,7 +119,6 @@ class KeycloakClientServiceTest {
         rep.setLastName("Wonder");
 
         KeycloakUser user = service.mapToKeycloakUser(rep);
-        assertEquals("id-42", user.getId());
         assertEquals("alice", user.getUsername());
         assertEquals("alice@example.com", user.getEmail());
         assertEquals("Alice", user.getFirstName());

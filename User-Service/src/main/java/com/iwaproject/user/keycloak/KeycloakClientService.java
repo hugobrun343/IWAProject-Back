@@ -82,21 +82,19 @@ public class KeycloakClientService {
     }
 
     public KeycloakUser mapToKeycloakUser(UserRepresentation kcUser) {
-        KeycloakUser user = new KeycloakUser(
-                kcUser.getId(),
+        return new KeycloakUser(
                 kcUser.getUsername(),
                 kcUser.getEmail(),
                 kcUser.getFirstName(),
                 kcUser.getLastName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("telephone") != null ? kcUser.getAttributes().get("telephone").getFirst() : null : null,
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("localisation") != null ? kcUser.getAttributes().get("localisation").get(0) : null : null,
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("description") != null ? kcUser.getAttributes().get("description").get(0) : null : null,
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("photoProfil") != null ? kcUser.getAttributes().get("photoProfil").get(0) : null : null,
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("verificationIdentite") != null ? Boolean.valueOf(kcUser.getAttributes().get("verificationIdentite").get(0)) : null : null,
+                kcUser.getAttributes() != null ? kcUser.getAttributes().get("preferences") != null ? kcUser.getAttributes().get("preferences").get(0) : null : null,
+                kcUser.getCreatedTimestamp() != null ? new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new java.util.Date(kcUser.getCreatedTimestamp())) : null
         );
-        return user;
     }
 
     public String getUsernameFromToken(String token) throws IOException {
