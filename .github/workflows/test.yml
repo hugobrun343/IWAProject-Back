@@ -49,15 +49,10 @@ jobs:
       - name: Make test script executable
         run: chmod +x ./run-all-tests.sh
       
-      - name: Run unit tests
+      - name: Run all tests (unit + integration)
         run: |
-          echo "🧪 Running unit tests..."
-          ./run-all-tests.sh unit
-      
-      - name: Run integration tests
-        run: |
-          echo "🔗 Running integration tests with test databases..."
-          ./run-all-tests.sh integration
+          echo "🧪 Running all tests (unit + integration)..."
+          ./run-all-tests.sh all
       
       - name: Upload test reports
         if: always()
