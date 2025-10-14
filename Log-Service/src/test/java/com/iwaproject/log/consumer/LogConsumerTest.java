@@ -2,7 +2,7 @@ package com.iwaproject.log.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.service.LogService;
+import com.iwaproject.log.services.LogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

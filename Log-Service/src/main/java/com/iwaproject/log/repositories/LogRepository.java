@@ -1,4 +1,4 @@
-package com.iwaproject.log.repository;
+package com.iwaproject.log.repositories;
 
 import com.iwaproject.log.model.LogEntry;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;

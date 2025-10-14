@@ -1,7 +1,8 @@
-package com.iwaproject.log.service;
+package com.iwaproject.log.services;
 
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.repository.LogRepository;
+import com.iwaproject.log.repositories.LogRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -11,13 +12,10 @@ import java.util.List;
  * Service for managing logs in Elasticsearch
  */
 @Service
+@RequiredArgsConstructor
 public class LogService {
 
     private final LogRepository logRepository;
-
-    public LogService(LogRepository logRepository) {
-        this.logRepository = logRepository;
-    }
 
     /**
      * Save a log entry to Elasticsearch

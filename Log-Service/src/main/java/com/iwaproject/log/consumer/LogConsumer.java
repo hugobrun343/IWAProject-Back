@@ -2,27 +2,22 @@ package com.iwaproject.log.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.service.LogService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.iwaproject.log.services.LogService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 /**
  * Kafka consumer that listens to log messages from microservices
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class LogConsumer {
-
-    private static final Logger logger = LoggerFactory.getLogger(LogConsumer.class);
     
     private final LogService logService;
     private final ObjectMapper objectMapper;
-
-    public LogConsumer(LogService logService, ObjectMapper objectMapper) {
-        this.logService = logService;
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * Consume logs from Kafka and store in Elasticsearch
@@ -36,14 +31,14 @@ public class LogConsumer {
             // Store in Elasticsearch
             logService.saveLog(logEntry);
             
-            logger.debug("Log saved: [{}] {} ({}) - {}", 
+            log.debug("Log saved: [{}] {} ({}) - {}", 
                 logEntry.getLevel(), 
                 logEntry.getService(),
                 logEntry.getLogger(), 
                 logEntry.getMessage());
                 
         } catch (Exception e) {
-            logger.error("Error processing log message: {}", message, e);
+            log.error("Error processing log message: {}", message, e);
         }
     }
 }

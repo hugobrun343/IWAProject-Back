@@ -1,8 +1,8 @@
 package com.iwaproject.log.integration;
 
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.repository.LogRepository;
-import com.iwaproject.log.service.LogService;
+import com.iwaproject.log.repositories.LogRepository;
+import com.iwaproject.log.services.LogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
