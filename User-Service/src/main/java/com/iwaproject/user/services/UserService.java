@@ -17,6 +17,7 @@ import com.iwaproject.user.repositories.UserLanguageRepository;
 import com.iwaproject.user.repositories.UserSpecialisationRepository;
 import org.keycloak.representations.idm.UserRepresentation;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,37 +26,64 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service for user management.
+ */
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
+    /**
+     * User image repository.
+     */
     private final UserImageRepository userImageRepository;
+
+    /**
+     * User language repository.
+     */
     private final UserLanguageRepository userLanguageRepository;
+
+    /**
+     * User specialisation repository.
+     */
     private final UserSpecialisationRepository userSpecialisationRepository;
+
+    /**
+     * Language repository.
+     */
     private final LanguageRepository languageRepository;
+
+    /**
+     * Specialisation repository.
+     */
     private final SpecialisationRepository specialisationRepository;
+
+    /**
+     * Keycloak client service.
+     */
     private final KeycloakClientService keycloakClientService;
 
-    public UserService(UserImageRepository userImageRepository,
-                       UserLanguageRepository userLanguageRepository,
-                       UserSpecialisationRepository userSpecialisationRepository,
-                       LanguageRepository languageRepository,
-                       SpecialisationRepository specialisationRepository,
-                       KeycloakClientService keycloakClientService) {
-        this.userImageRepository = userImageRepository;
-        this.userLanguageRepository = userLanguageRepository;
-        this.userSpecialisationRepository = userSpecialisationRepository;
-        this.languageRepository = languageRepository;
-        this.specialisationRepository = specialisationRepository;
-        this.keycloakClientService = keycloakClientService;
+    /**
+     * Get user image.
+     *
+     * @param username the username
+     * @return user image DTO
+     */
+    public UserImageDTO getUserImage(final String username) {
+        return userImageRepository.findByUsername(username)
+                .map(ui -> new UserImageDTO(ui.getImageBase64()))
+                .orElse(null);
     }
 
-    public UserImageDTO getUserImage(String username) {
-    return userImageRepository.findByUsername(username)
-        .map(ui -> new UserImageDTO(ui.getImageBase64()))
-        .orElse(null);
-    }
-
-    public UserImageDTO uploadUserPhotoBase64(String username, String base64) {
+    /**
+     * Upload user photo from base64.
+     *
+     * @param username the username
+     * @param base64 base64 encoded image
+     * @return user image DTO
+     */
+    public UserImageDTO uploadUserPhotoBase64(final String username,
+                                               final String base64) {
         UserImage userImage = userImageRepository.findByUsername(username)
                 .orElse(new UserImage());
         userImage.setUsername(username);
@@ -64,34 +92,62 @@ public class UserService {
         return new UserImageDTO(base64);
     }
 
-    public List<UserLanguageDTO> getUserLanguages(String username) {
-    return userLanguageRepository.findByUsername(username)
-        .orElseGet(List::of)
-        .stream()
-        .map(ul -> new UserLanguageDTO(
-            new LanguageDTO(ul.getLanguage().getLabel())))
-        .toList();
+    /**
+     * Get user languages.
+     *
+     * @param username the username
+     * @return list of user language DTOs
+     */
+    public List<UserLanguageDTO> getUserLanguages(final String username) {
+        return userLanguageRepository.findByUsername(username)
+                .orElseGet(List::of)
+                .stream()
+                .map(ul -> new UserLanguageDTO(
+                        new LanguageDTO(ul.getLanguage().getLabel())))
+                .toList();
     }
 
-    public List<UserSpecialisationDTO> getUserSpecialisations(String username) {
-    return userSpecialisationRepository.findByUsername(username)
-        .orElseGet(List::of)
-        .stream()
-        .map(us -> new UserSpecialisationDTO(
-            new SpecialisationDTO(us.getSpecialisation().getLabel())))
-        .toList();
+    /**
+     * Get user specialisations.
+     *
+     * @param username the username
+     * @return list of user specialisation DTOs
+     */
+    public List<UserSpecialisationDTO> getUserSpecialisations(
+            final String username) {
+        return userSpecialisationRepository.findByUsername(username)
+                .orElseGet(List::of)
+                .stream()
+                .map(us -> new UserSpecialisationDTO(
+                        new SpecialisationDTO(
+                                us.getSpecialisation().getLabel())))
+                .toList();
     }
 
-    public KeycloakUser getUserDataByUsername(String username) {
-        UserRepresentation kcUser = keycloakClientService.getUserByUsername(username);
+    /**
+     * Get user data by username.
+     *
+     * @param username the username
+     * @return keycloak user
+     */
+    public KeycloakUser getUserDataByUsername(final String username) {
+        UserRepresentation kcUser =
+                keycloakClientService.getUserByUsername(username);
         return keycloakClientService.mapToKeycloakUser(kcUser);
     }
 
-    // ==================== New methods for endpoints ====================
-
-    public KeycloakUser updateUserProfile(String username, Map<String, Object> updates) {
+    /**
+     * Update user profile.
+     *
+     * @param username the username
+     * @param updates map of updates
+     * @return updated keycloak user
+     */
+    public KeycloakUser updateUserProfile(final String username,
+                                          final Map<String, Object> updates) {
         // Call Keycloak API to update the profile
-        UserRepresentation kcUser = keycloakClientService.getUserByUsername(username);
+        UserRepresentation kcUser =
+                keycloakClientService.getUserByUsername(username);
 
         // Update attributes based on the updates map
         if (updates.containsKey("firstName")) {
@@ -105,13 +161,23 @@ public class UserService {
         }
 
         // Perform Keycloak update
-    keycloakClientService.updateUser(kcUser.getId(), kcUser);
+        keycloakClientService.updateUser(kcUser.getId(), kcUser);
 
         return keycloakClientService.mapToKeycloakUser(kcUser);
     }
 
+    /**
+     * Upload user photo from multipart file.
+     *
+     * @param username the username
+     * @param file the multipart file
+     * @return user image DTO
+     * @throws IOException if file reading fails
+     */
     @Transactional
-    public UserImageDTO uploadUserPhoto(String username, MultipartFile file) throws IOException {
+    public UserImageDTO uploadUserPhoto(final String username,
+                                         final MultipartFile file)
+            throws IOException {
         // Convert file to base64
         byte[] bytes = file.getBytes();
         String base64 = Base64.getEncoder().encodeToString(bytes);
@@ -127,24 +193,46 @@ public class UserService {
         return new UserImageDTO(base64);
     }
 
+    /**
+     * Delete user photo.
+     *
+     * @param username the username
+     */
     @Transactional
-    public void deleteUserPhoto(String username) {
+    public void deleteUserPhoto(final String username) {
         // Delete user profile photo
         userImageRepository.deleteByUsername(username);
     }
 
-    public List<UserLanguageDTO> getUserLanguagesByUsername(String username) {
+    /**
+     * Get user languages by username.
+     *
+     * @param username the username
+     * @return list of user language DTOs
+     */
+    public List<UserLanguageDTO> getUserLanguagesByUsername(
+            final String username) {
         return getUserLanguages(username);
     }
 
+    /**
+     * Replace user languages.
+     *
+     * @param username the username
+     * @param languageLabels list of language labels
+     * @return list of user language DTOs
+     */
     @Transactional
-    public List<UserLanguageDTO> replaceUserLanguages(String username, List<String> languageLabels) {
+    public List<UserLanguageDTO> replaceUserLanguages(
+            final String username,
+            final List<String> languageLabels) {
         // Delete all user languages and add new ones
         userLanguageRepository.deleteByUsername(username);
 
         for (String label : languageLabels) {
             var language = languageRepository.findById(label)
-                    .orElseThrow(() -> new RuntimeException("Language not found: " + label));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Language not found: " + label));
 
             UserLanguage ul = new UserLanguage();
             ul.setUsername(username);
@@ -155,18 +243,35 @@ public class UserService {
         return getUserLanguages(username);
     }
 
-    public List<UserSpecialisationDTO> getUserSpecialisationsByUsername(String username) {
+    /**
+     * Get user specialisations by username.
+     *
+     * @param username the username
+     * @return list of user specialisation DTOs
+     */
+    public List<UserSpecialisationDTO> getUserSpecialisationsByUsername(
+            final String username) {
         return getUserSpecialisations(username);
     }
 
+    /**
+     * Replace user specialisations.
+     *
+     * @param username the username
+     * @param specialisationLabels list of specialisation labels
+     * @return list of user specialisation DTOs
+     */
     @Transactional
-    public List<UserSpecialisationDTO> replaceUserSpecialisations(String username, List<String> specialisationLabels) {
+    public List<UserSpecialisationDTO> replaceUserSpecialisations(
+            final String username,
+            final List<String> specialisationLabels) {
         // Delete all user specialisations and add new ones
         userSpecialisationRepository.deleteByUsername(username);
 
         for (String label : specialisationLabels) {
             var specialisation = specialisationRepository.findById(label)
-                    .orElseThrow(() -> new RuntimeException("Specialisation not found: " + label));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Specialisation not found: " + label));
 
             UserSpecialisation us = new UserSpecialisation();
             us.setUsername(username);

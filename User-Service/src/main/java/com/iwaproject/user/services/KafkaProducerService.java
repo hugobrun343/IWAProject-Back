@@ -1,19 +1,30 @@
 package com.iwaproject.user.services;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+/**
+ * Kafka producer service.
+ */
 @Service
+@RequiredArgsConstructor
 public class KafkaProducerService {
 
+    /**
+     * Kafka template.
+     */
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public KafkaProducerService(KafkaTemplate<String, Object> kafkaTemplate) {
-        this.kafkaTemplate = kafkaTemplate;
-    }
-
-    public void sendMessage(String topic, Object message) {
+    /**
+     * Send message to Kafka topic.
+     *
+     * @param topic the topic name
+     * @param message the message to send
+     */
+    public void sendMessage(final String topic, final Object message) {
         kafkaTemplate.send(topic, message);
-        System.out.println("Message envoyé au topic " + topic + ": " + message);
+        System.out.println("Message envoyé au topic "
+                + topic + ": " + message);
     }
 }

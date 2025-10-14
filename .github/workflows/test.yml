@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows: ["Lint"]
     types: [completed]
-    branches: [main]
 
 run-name: Test - ${{ github.event.workflow_run.head_commit.message }}
 

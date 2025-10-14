@@ -11,47 +11,115 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Service to send structured log messages to Kafka
+ * Service to send structured log messages to Kafka.
  */
 @Service
 public class KafkaLogService {
 
+    /**
+     * Kafka template.
+     */
     private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    /**
+     * Object mapper.
+     */
     private final ObjectMapper objectMapper;
+
+    /**
+     * Logs topic name.
+     */
     private final String logsTopic;
+
+    /**
+     * Service name.
+     */
     private final String serviceName;
 
-    public KafkaLogService(KafkaTemplate<String, Object> kafkaTemplate,
-                          ObjectMapper objectMapper,
-                          @Value("${kafka.logs.topic:microservices-logs}") String logsTopic,
-                          @Value("${spring.application.name:User-Service}") String serviceName) {
-        this.kafkaTemplate = kafkaTemplate;
-        this.objectMapper = objectMapper;
-        this.logsTopic = logsTopic;
-        this.serviceName = serviceName;
+    /**
+     * Constructor.
+     *
+     * @param template kafka template
+     * @param mapper object mapper
+     * @param topic logs topic name
+     * @param name service name
+     */
+    public KafkaLogService(
+            final KafkaTemplate<String, Object> template,
+            final ObjectMapper mapper,
+            @Value("${kafka.logs.topic:microservices-logs}")
+            final String topic,
+            @Value("${spring.application.name:User-Service}")
+            final String name) {
+        this.kafkaTemplate = template;
+        this.objectMapper = mapper;
+        this.logsTopic = topic;
+        this.serviceName = name;
     }
 
-    public void info(String logger, String message) {
+    /**
+     * Send info log.
+     *
+     * @param logger logger name
+     * @param message log message
+     */
+    public void info(final String logger, final String message) {
         sendLog("INFO", logger, message, null);
     }
 
-    public void error(String logger, String message) {
+    /**
+     * Send error log.
+     *
+     * @param logger logger name
+     * @param message log message
+     */
+    public void error(final String logger, final String message) {
         sendLog("ERROR", logger, message, null);
     }
 
-    public void error(String logger, String message, Throwable throwable) {
+    /**
+     * Send error log with throwable.
+     *
+     * @param logger logger name
+     * @param message log message
+     * @param throwable exception
+     */
+    public void error(final String logger, final String message,
+                      final Throwable throwable) {
         sendLog("ERROR", logger, message, throwable);
     }
 
-    public void debug(String logger, String message) {
+    /**
+     * Send debug log.
+     *
+     * @param logger logger name
+     * @param message log message
+     */
+    public void debug(final String logger, final String message) {
         sendLog("DEBUG", logger, message, null);
     }
 
-    public void warn(String logger, String message) {
+    /**
+     * Send warn log.
+     *
+     * @param logger logger name
+     * @param message log message
+     */
+    public void warn(final String logger, final String message) {
         sendLog("WARN", logger, message, null);
     }
 
-    private void sendLog(String level, String logger, String message, Throwable throwable) {
+    /**
+     * Send log to Kafka.
+     *
+     * @param level log level
+     * @param logger logger name
+     * @param message log message
+     * @param throwable exception if any
+     */
+    private void sendLog(final String level, final String logger,
+                         final String message,
+                         final Throwable throwable) {
         try {
             Map<String, Object> logEntry = new HashMap<>();
             logEntry.put("timestamp", Instant.now().toString());
@@ -59,7 +127,7 @@ public class KafkaLogService {
             logEntry.put("service", serviceName);
             logEntry.put("logger", logger);
             logEntry.put("message", message);
-            
+
             if (throwable != null) {
                 logEntry.put("exception", throwable.getClass().getName());
                 logEntry.put("stackTrace", getStackTrace(throwable));
@@ -69,12 +137,20 @@ public class KafkaLogService {
             kafkaTemplate.send(logsTopic, json);
         } catch (Exception e) {
             // Fallback to console if Kafka fails
-            System.err.println("[KafkaLogService] Failed to send log to Kafka: " + e.getMessage());
-            System.err.println("Original log: [" + level + "] " + logger + " - " + message);
+            System.err.println("[KafkaLogService] "
+                    + "Failed to send log to Kafka: " + e.getMessage());
+            System.err.println("Original log: [" + level + "] "
+                    + logger + " - " + message);
         }
     }
 
-    private String getStackTrace(Throwable throwable) {
+    /**
+     * Get stack trace as string.
+     *
+     * @param throwable the throwable
+     * @return stack trace string
+     */
+    private String getStackTrace(final Throwable throwable) {
         StringBuilder sb = new StringBuilder();
         sb.append(throwable.toString()).append("\n");
         for (StackTraceElement element : throwable.getStackTrace()) {

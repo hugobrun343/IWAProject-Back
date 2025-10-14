@@ -59,6 +59,10 @@ run_tests_for_service() {
     }
     
     case $test_type in
+        "lint")
+            # Run ONLY checkstyle lint
+            ./mvnw checkstyle:check -q
+            ;;
         "unit")
             # Run ONLY unit tests (*Test.java, no DB needed)
             ./mvnw clean test -q
@@ -170,12 +174,14 @@ if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
     echo "Usage: $0 [test-type]"
     echo ""
     echo "Test types:"
+    echo "  lint        - Run checkstyle lint only"
     echo "  unit        - Run unit tests only (default)"
     echo "  integration - Run integration tests only"
     echo "  all         - Run all tests (unit + integration)"
     echo "  quality     - Run quality checks (static analysis, style)"
     echo ""
     echo "Examples:"
+    echo "  $0 lint         # Run lint checks"
     echo "  $0              # Run unit tests"
     echo "  $0 integration  # Run integration tests"
     echo "  $0 all          # Run all tests"

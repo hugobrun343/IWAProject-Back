@@ -6,9 +6,17 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Health check controller for Gateway Service.
+ */
 @RestController
-public class HealthController {
+public final class HealthController {
 
+    /**
+     * Health check endpoint.
+     *
+     * @return Map containing health status information
+     */
     @GetMapping("/health")
     public Map<String, Object> health() {
         Map<String, Object> response = new HashMap<>();
@@ -20,6 +28,11 @@ public class HealthController {
         return response;
     }
 
+    /**
+     * Test deployment endpoint.
+     *
+     * @return Map containing test deployment information
+     */
     @GetMapping("/test")
     public Map<String, Object> testdecon() {
         Map<String, Object> response = new HashMap<>();

@@ -60,7 +60,7 @@ jobs:
         run: |
           cd ${{ matrix.service }}
           echo "🔍 Running Checkstyle..."
-          ./mvnw checkstyle:check || echo "⚠️ Checkstyle warnings found"
+          ./mvnw checkstyle:check
       
       - name: Upload checkstyle report
         if: always()

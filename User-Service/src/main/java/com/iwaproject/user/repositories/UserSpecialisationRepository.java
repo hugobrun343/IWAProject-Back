@@ -7,8 +7,25 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository for user specialisations.
+ */
 @Repository
-public interface UserSpecialisationRepository extends JpaRepository<UserSpecialisation, Long> {
+public interface UserSpecialisationRepository extends
+        JpaRepository<UserSpecialisation, Long> {
+
+    /**
+     * Find user specialisations by username.
+     *
+     * @param username the username
+     * @return optional list of user specialisations
+     */
     Optional<List<UserSpecialisation>> findByUsername(String username);
+
+    /**
+     * Delete user specialisations by username.
+     *
+     * @param username the username
+     */
     void deleteByUsername(String username);
 }

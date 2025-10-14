@@ -8,12 +8,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Specialisation entity.
+ */
 @Entity
 @Table(name = "specialisation")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Specialisation {
+    /**
+     * Specialisation label (primary key).
+     */
     @Id
     @Column(name = "label", nullable = false)
     private String label;
