@@ -40,3 +40,6 @@ spring-boot-*.log
 .env
 .env.local
 .env.*.local
+
+# Bruno environments (contains secrets)
+bruno-collection/environments/Local.bru

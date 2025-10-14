@@ -1,0 +1,10 @@
+vars {
+  GATEWAY_URL: http://localhost:8085
+  KEYCLOAK_URL: http://localhost:8080
+  KEYCLOAK_REALM: iwa-realm
+  CLIENT_ID: iwa-client
+  CLIENT_SECRET: your-client-secret-here
+  ACCESS_TOKEN: 
+  REFRESH_TOKEN: 
+}
+
