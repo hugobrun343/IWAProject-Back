@@ -1,21 +1,25 @@
 FROM eclipse-temurin:21-jdk AS build
 
-WORKDIR /workspace
+WORKDIR /workspace/app
 
-# Copy parent POM
-COPY pom.xml ./
+# Copy Maven wrapper and pom from service directory
+COPY Gateway-Service/mvnw .
+COPY Gateway-Service/.mvn .mvn
+COPY Gateway-Service/pom.xml .
 
-# Copy service files
-COPY Gateway-Service ./Gateway-Service/
+# Copy source code
+COPY Gateway-Service/src src
 
-# Build
-WORKDIR /workspace/Gateway-Service
+# Build application
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests package
 
-# Runtime
+# Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/Gateway-Service/target/*.jar app.jar
+
+# Copy jar from build stage
+COPY --from=build /workspace/app/target/*.jar app.jar
+
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]

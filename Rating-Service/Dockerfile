@@ -1,21 +1,25 @@
 FROM eclipse-temurin:21-jdk AS build
 
-WORKDIR /workspace
+WORKDIR /workspace/app
 
-# Copy parent POM
-COPY pom.xml ./
+# Copy Maven wrapper and pom from service directory
+COPY Rating-Service/mvnw .
+COPY Rating-Service/.mvn .mvn
+COPY Rating-Service/pom.xml .
 
-# Copy service files
-COPY Rating-Service ./Rating-Service/
+# Copy source code
+COPY Rating-Service/src src
 
-# Build
-WORKDIR /workspace/Rating-Service
+# Build application
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests package
 
-# Runtime
+# Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/Rating-Service/target/*.jar app.jar
+
+# Copy jar from build stage
+COPY --from=build /workspace/app/target/*.jar app.jar
+
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]

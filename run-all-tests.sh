@@ -20,6 +20,7 @@ TEST_TYPE=${1:-unit}
 SERVICES=(
     "Gateway-Service"
     "User-Service"
+    "Log-Service"
     "Announcement-Service"
     "Application-Service"
     "Chat-Service"
@@ -27,8 +28,6 @@ SERVICES=(
     "Payment-Service"
     "Rating-Service"
 )
-
-# Log-Service uses ELK stack (no database tests needed)
 
 # Function to print colored output
 print_status() {
@@ -61,16 +60,20 @@ run_tests_for_service() {
     
     case $test_type in
         "unit")
+            # Run ONLY unit tests (*Test.java, no DB needed)
             ./mvnw clean test -q
             ;;
         "integration")
-            ./mvnw clean verify -Pintegration-tests -q
+            # Run ONLY integration tests (*IntegrationTest.java, needs DB)
+            ./mvnw clean test-compile failsafe:integration-test failsafe:verify -q
             ;;
         "all")
-            ./mvnw clean verify -Pall-tests -q
+            # Run ALL tests (unit + integration, needs DB)
+            ./mvnw clean verify -q
             ;;
         "quality")
-            ./mvnw clean verify -Pquality -q
+            # Run all tests with quality checks
+            ./mvnw clean verify -q
             ;;
         *)
             print_error "Unknown test type: $test_type"

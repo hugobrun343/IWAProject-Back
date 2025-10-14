@@ -1,21 +1,25 @@
 FROM eclipse-temurin:21-jdk AS build
 
-WORKDIR /workspace
+WORKDIR /workspace/app
 
-# Copy parent POM
-COPY pom.xml ./
+# Copy Maven wrapper and pom from service directory
+COPY Chat-Service/mvnw .
+COPY Chat-Service/.mvn .mvn
+COPY Chat-Service/pom.xml .
 
-# Copy service files
-COPY Chat-Service ./Chat-Service/
+# Copy source code
+COPY Chat-Service/src src
 
-# Build
-WORKDIR /workspace/Chat-Service
+# Build application
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests package
 
-# Runtime
+# Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/Chat-Service/target/*.jar app.jar
+
+# Copy jar from build stage
+COPY --from=build /workspace/app/target/*.jar app.jar
+
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]

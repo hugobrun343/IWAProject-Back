@@ -3,7 +3,7 @@ package com.iwaproject.log.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iwaproject.log.consumer.LogConsumer;
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.repository.LogRepository;
+import com.iwaproject.log.repositories.LogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

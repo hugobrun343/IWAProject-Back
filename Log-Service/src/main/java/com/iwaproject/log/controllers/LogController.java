@@ -1,7 +1,8 @@
-package com.iwaproject.log.controller;
+package com.iwaproject.log.controllers;
 
 import com.iwaproject.log.model.LogEntry;
-import com.iwaproject.log.service.LogService;
+import com.iwaproject.log.services.LogService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,13 +15,10 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/logs")
+@RequiredArgsConstructor
 public class LogController {
 
     private final LogService logService;
-
-    public LogController(LogService logService) {
-        this.logService = logService;
-    }
 
     /**
      * Get all logs
