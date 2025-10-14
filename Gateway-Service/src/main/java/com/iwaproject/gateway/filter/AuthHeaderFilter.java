@@ -1,5 +1,6 @@
 package com.iwaproject.gateway.filter;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * for backend services. Also adds a secret header to prevent
  * direct access to services bypassing the gateway.
  */
+@Slf4j
 @Configuration
 public class AuthHeaderFilter {
 
@@ -34,6 +36,9 @@ public class AuthHeaderFilter {
     public HandlerFilterFunction<ServerResponse, ServerResponse>
             addAuthHeaders() {
         return (request, next) -> {
+            log.debug("Processing request: {} {}",
+                    request.method(), request.path());
+
             Authentication auth = SecurityContextHolder
                     .getContext()
                     .getAuthentication();
@@ -50,10 +55,13 @@ public class AuthHeaderFilter {
 
                 if (username != null) {
                     requestBuilder.header("X-Username", username);
+                    log.info("Authenticated request from user: {}", username);
                 }
                 if (userId != null) {
                     requestBuilder.header("X-User-Id", userId);
                 }
+            } else {
+                log.debug("Unauthenticated request to: {}", request.path());
             }
 
             // Add gateway secret to prove request comes from gateway

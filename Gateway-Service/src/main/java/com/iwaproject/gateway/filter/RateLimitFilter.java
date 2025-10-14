@@ -2,6 +2,7 @@ package com.iwaproject.gateway.filter;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Rate limiting filter to prevent abuse.
  * Limits requests per IP address.
  */
+@Slf4j
 @Component
 public class RateLimitFilter implements HandlerInterceptor {
 
@@ -63,8 +65,12 @@ public class RateLimitFilter implements HandlerInterceptor {
                 k -> new RequestCounter()
         );
 
+        int currentCount = counter.increment();
+
         // Check if rate limit exceeded
-        if (counter.increment() > MAX_REQUESTS_PER_MINUTE) {
+        if (currentCount > MAX_REQUESTS_PER_MINUTE) {
+            log.warn("Rate limit exceeded for IP: {} ({} requests)",
+                    clientIp, currentCount);
             response.setStatus(HTTP_TOO_MANY_REQUESTS);
             response.getWriter().write(
                     "{\"error\":\"Rate limit exceeded. "
@@ -73,6 +79,8 @@ public class RateLimitFilter implements HandlerInterceptor {
             return false;
         }
 
+        log.debug("Request allowed for IP: {} ({}/{})",
+                clientIp, currentCount, MAX_REQUESTS_PER_MINUTE);
         return true;
     }
 

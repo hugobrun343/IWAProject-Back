@@ -18,6 +18,7 @@ import com.iwaproject.user.repositories.UserSpecialisationRepository;
 import org.keycloak.representations.idm.UserRepresentation;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +30,7 @@ import java.util.Map;
 /**
  * Service for user management.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -131,8 +133,10 @@ public class UserService {
      * @return keycloak user
      */
     public KeycloakUser getUserDataByUsername(final String username) {
+        log.debug("Fetching user data for username: {}", username);
         UserRepresentation kcUser =
                 keycloakClientService.getUserByUsername(username);
+        log.info("Successfully retrieved user data for: {}", username);
         return keycloakClientService.mapToKeycloakUser(kcUser);
     }
 
@@ -145,6 +149,8 @@ public class UserService {
      */
     public KeycloakUser updateUserProfile(final String username,
                                           final Map<String, Object> updates) {
+        log.info("Updating profile for user: {} with fields: {}",
+                username, updates.keySet());
         // Call Keycloak API to update the profile
         UserRepresentation kcUser =
                 keycloakClientService.getUserByUsername(username);
@@ -162,6 +168,7 @@ public class UserService {
 
         // Perform Keycloak update
         keycloakClientService.updateUser(kcUser.getId(), kcUser);
+        log.info("Profile successfully updated for user: {}", username);
 
         return keycloakClientService.mapToKeycloakUser(kcUser);
     }
@@ -178,6 +185,8 @@ public class UserService {
     public UserImageDTO uploadUserPhoto(final String username,
                                          final MultipartFile file)
             throws IOException {
+        log.info("Uploading photo for user: {} (size: {} bytes)",
+                username, file.getSize());
         // Convert file to base64
         byte[] bytes = file.getBytes();
         String base64 = Base64.getEncoder().encodeToString(bytes);
@@ -189,6 +198,7 @@ public class UserService {
         userImage.setUsername(username);
         userImage.setImageBase64(base64);
         userImageRepository.save(userImage);
+        log.info("Photo successfully uploaded for user: {}", username);
 
         return new UserImageDTO(base64);
     }
@@ -200,8 +210,10 @@ public class UserService {
      */
     @Transactional
     public void deleteUserPhoto(final String username) {
+        log.info("Deleting photo for user: {}", username);
         // Delete user profile photo
         userImageRepository.deleteByUsername(username);
+        log.info("Photo successfully deleted for user: {}", username);
     }
 
     /**
@@ -226,6 +238,8 @@ public class UserService {
     public List<UserLanguageDTO> replaceUserLanguages(
             final String username,
             final List<String> languageLabels) {
+        log.info("Replacing languages for user: {} with: {}",
+                username, languageLabels);
         // Delete all user languages and add new ones
         userLanguageRepository.deleteByUsername(username);
 
@@ -240,6 +254,7 @@ public class UserService {
             userLanguageRepository.save(ul);
         }
 
+        log.info("Languages successfully updated for user: {}", username);
         return getUserLanguages(username);
     }
 
@@ -265,6 +280,8 @@ public class UserService {
     public List<UserSpecialisationDTO> replaceUserSpecialisations(
             final String username,
             final List<String> specialisationLabels) {
+        log.info("Replacing specialisations for user: {} with: {}",
+                username, specialisationLabels);
         // Delete all user specialisations and add new ones
         userSpecialisationRepository.deleteByUsername(username);
 
@@ -279,6 +296,8 @@ public class UserService {
             userSpecialisationRepository.save(us);
         }
 
+        log.info("Specialisations successfully updated for user: {}",
+                username);
         return getUserSpecialisations(username);
     }
 }

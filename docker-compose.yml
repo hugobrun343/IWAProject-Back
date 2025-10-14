@@ -267,6 +267,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: announcement_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8081
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8081:8081"
@@ -289,6 +290,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: application_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8082
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8082:8082"
@@ -311,6 +313,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: chat_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8083
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8083:8083"
@@ -333,6 +336,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: favorite_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8084
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8084:8084"
@@ -383,6 +387,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: payment_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8087
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8087:8087"
@@ -405,6 +410,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: rating_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8088
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
       - "8088:8088"
@@ -459,6 +465,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8085
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       GATEWAY_SECRET: ${GATEWAY_SECRET}
