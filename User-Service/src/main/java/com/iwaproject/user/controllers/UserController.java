@@ -13,7 +13,6 @@ import com.iwaproject.user.services.LanguageService;
 import com.iwaproject.user.services.SpecialisationService;
 import com.iwaproject.user.services.UserService;
 import com.iwaproject.user.services.KafkaLogService;
-import com.iwaproject.user.keycloak.KeycloakClientService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -63,10 +62,6 @@ public class UserController {
      */
     private final KafkaLogService kafkaLogService;
 
-    /**
-     * Keycloak client service.
-     */
-    private final KeycloakClientService keycloakClientService;
 
     /**
      * Logger name constant.
@@ -106,23 +101,15 @@ public class UserController {
 
     /**
      * Get my profile.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @return response entity with private user DTO
      */
     @GetMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> getMyProfile(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.error(LOGGER_NAME,
-                    "Error extracting username from token: "
-                    + e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestHeader(value = "X-Username", required = true)
+            final String username) {
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/me - User: " + username);
 
@@ -146,25 +133,17 @@ public class UserController {
 
     /**
      * Update my profile.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @param updates map of updates
      * @return response entity with updated private user DTO
      */
     @PatchMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> updateMyProfile(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader,
+            @RequestHeader(value = "X-Username", required = true)
+            final String username,
             @RequestBody final Map<String, Object> updates) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for PATCH /users/me");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
         kafkaLogService.info(LOGGER_NAME,
                 "PATCH /users/me - User: " + username
                 + ", Updates: " + updates);
@@ -188,26 +167,18 @@ public class UserController {
 
     /**
      * Upload my photo.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @param file multipart file
      * @return response entity with user image DTO
      */
     @PostMapping(value = "/users/me/photo",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserImageDTO> uploadMyPhoto(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader,
+            @RequestHeader(value = "X-Username", required = true)
+            final String username,
             @RequestParam("file") final MultipartFile file) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for POST /users/me/photo");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
         kafkaLogService.info(LOGGER_NAME,
                 "POST /users/me/photo - User: " + username
                 + ", File: " + file.getOriginalFilename());
@@ -227,23 +198,15 @@ public class UserController {
 
     /**
      * Delete my photo.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @return response entity with no content
      */
     @DeleteMapping("/users/me/photo")
     public ResponseEntity<Void> deleteMyPhoto(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for DELETE /users/me/photo");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestHeader(value = "X-Username", required = true)
+            final String username) {
         kafkaLogService.info(LOGGER_NAME,
                 "DELETE /users/me/photo - User: " + username);
         userService.deleteUserPhoto(username);
@@ -252,23 +215,15 @@ public class UserController {
 
     /**
      * Get my languages.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @return response entity with user languages response DTO
      */
     @GetMapping("/users/me/languages")
     public ResponseEntity<List<UserLanguagesResponseDTO>> getMyLanguages(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for GET /users/me/languages");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestHeader(value = "X-Username", required = true)
+            final String username) {
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/me/languages - User: " + username);
         List<UserLanguageDTO> languages =
@@ -281,27 +236,19 @@ public class UserController {
 
     /**
      * Replace my languages.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @param body request body with language labels
      * @return response entity with user languages response DTO
      */
     @PutMapping("/users/me/languages")
     public ResponseEntity<List<UserLanguagesResponseDTO>>
             replaceMyLanguages(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader,
+            @RequestHeader(value = "X-Username", required = true)
+            final String username,
             @RequestBody final Map<String, List<String>> body) {
         List<String> languageLabels = body.get("langue_labels");
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for PUT /users/me/languages");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
         kafkaLogService.info(LOGGER_NAME,
                 "PUT /users/me/languages - User: " + username
                 + ", languageLabels: " + languageLabels);
@@ -315,24 +262,16 @@ public class UserController {
 
     /**
      * Get my specialisations.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @return response entity with user specialisation DTOs
      */
     @GetMapping("/users/me/specialisations")
     public ResponseEntity<List<UserSpecialisationDTO>>
             getMySpecialisations(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader) {
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for GET /users/me/specialisations");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestHeader(value = "X-Username", required = true)
+            final String username) {
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/me/specialisations - User: " + username);
         List<UserSpecialisationDTO> specialisations =
@@ -342,28 +281,20 @@ public class UserController {
 
     /**
      * Replace my specialisations.
+     * Username is extracted from X-Username header (set by Gateway).
      *
-     * @param authorizationHeader authorization bearer token
+     * @param username username from gateway header
      * @param body request body with specialisation labels
      * @return response entity with user specialisation DTOs
      */
     @PutMapping("/users/me/specialisations")
     public ResponseEntity<List<UserSpecialisationDTO>>
             replaceMySpecialisations(
-            @RequestHeader(value = "Authorization", required = false)
-            final String authorizationHeader,
+            @RequestHeader(value = "X-Username", required = true)
+            final String username,
             @RequestBody final Map<String, List<String>> body) {
         List<String> specialisationLabels =
                 body.get("specialisation_labels");
-        String username;
-        try {
-            username = extractUsernameFromAuthHeader(authorizationHeader);
-        } catch (Exception e) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "Unauthorized access: invalid or missing token "
-                    + "for PUT /users/me/specialisations");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
         kafkaLogService.info(LOGGER_NAME,
                 "PUT /users/me/specialisations - User: " + username
                 + ", specialisationLabels: " + specialisationLabels);
@@ -396,23 +327,5 @@ public class UserController {
                 user.getDateInscription()
         );
         return ResponseEntity.ok(publicUserDTO);
-    }
-
-    /**
-     * Extract username from authorization header.
-     *
-     * @param authorizationHeader the authorization header
-     * @return username
-     * @throws Exception if header is invalid or token verification fails
-     */
-    private String extractUsernameFromAuthHeader(
-            final String authorizationHeader) throws Exception {
-        if (authorizationHeader == null
-                || !authorizationHeader.startsWith("Bearer ")) {
-            throw new Exception(
-                    "Missing or invalid Authorization header");
-        }
-        String token = authorizationHeader.substring("Bearer ".length());
-        return keycloakClientService.getUsernameFromToken(token);
     }
 }

@@ -11,11 +11,9 @@ import com.iwaproject.user.services.KafkaLogService;
 import com.iwaproject.user.services.LanguageService;
 import com.iwaproject.user.services.SpecialisationService;
 import com.iwaproject.user.services.UserService;
-import com.iwaproject.user.keycloak.KeycloakClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -24,11 +22,12 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -44,12 +43,11 @@ class UserControllerTest {
     @Mock private SpecialisationService specialisationService;
     @Mock private UserService userService;
     @Mock private KafkaLogService kafkaLogService;
-    @Mock private KeycloakClientService keycloakClientService;
 
     @InjectMocks private UserController userController;
 
-    private static final String AUTH = "Authorization";
-    private static final String BEARER = "Bearer token";
+    private static final String X_USERNAME_HEADER = "X-Username";
+    private static final String TEST_USERNAME = "john";
 
     @BeforeEach
     void setup() {
@@ -78,47 +76,36 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/users/me with valid token returns profile")
+    @DisplayName("GET /api/users/me with valid username returns profile")
     void getMyProfile_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
         KeycloakUser kcUser = new KeycloakUser(
-                "john","john@example.com","John","Doe",
+                TEST_USERNAME,"john@example.com","John","Doe",
                 null,null,null,null,null,null,null);
-        given(userService.getUserDataByUsername("john")).willReturn(kcUser);
+        given(userService.getUserDataByUsername(TEST_USERNAME)).willReturn(kcUser);
 
-        mockMvc.perform(get("/api/users/me").header(AUTH, BEARER))
+        mockMvc.perform(get("/api/users/me").header(X_USERNAME_HEADER, TEST_USERNAME))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username", is("john")))
+                .andExpect(jsonPath("$.username", is(TEST_USERNAME)))
                 .andExpect(jsonPath("$.email", is("john@example.com")));
     }
 
     @Test
-    @DisplayName("GET /api/users/me with invalid token returns 401")
-    void getMyProfile_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-
-        mockMvc.perform(get("/api/users/me").header(AUTH, BEARER))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @DisplayName("GET /api/users/me without Authorization returns 401")
-    void getMyProfile_missingHeader_unauthorized() throws Exception {
+    @DisplayName("GET /api/users/me without username header returns 400")
+    void getMyProfile_missingHeader() throws Exception {
         mockMvc.perform(get("/api/users/me"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("PATCH /api/users/me updates profile")
     void patchMyProfile_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
         KeycloakUser updated = new KeycloakUser(
-                "john","new@example.com","John","Doe",
+                TEST_USERNAME,"new@example.com","John","Doe",
                 null,null,null,null,null,null,null);
-        given(userService.updateUserProfile(ArgumentMatchers.eq("john"), ArgumentMatchers.<Map<String,Object>>any())).willReturn(updated);
+        given(userService.updateUserProfile(eq(TEST_USERNAME), any())).willReturn(updated);
 
         mockMvc.perform(patch("/api/users/me")
-                        .header(AUTH, BEARER)
+                        .header(X_USERNAME_HEADER, TEST_USERNAME)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("email","new@example.com"))))
                 .andExpect(status().isOk())
@@ -126,85 +113,46 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/users/me with invalid token returns 401")
-    void patchMyProfile_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-
-        mockMvc.perform(patch("/api/users/me")
-                        .header(AUTH, BEARER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("email","x@x.com"))))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
     @DisplayName("POST /api/users/me/photo uploads photo")
     void uploadPhoto_created() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        given(userService.uploadUserPhoto(ArgumentMatchers.eq("john"), ArgumentMatchers.any())).willReturn(new UserImageDTO("base64img"));
+        given(userService.uploadUserPhoto(eq(TEST_USERNAME), any())).willReturn(new UserImageDTO("base64img"));
 
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1,2,3});
 
-        mockMvc.perform(multipart("/api/users/me/photo").file(file).header(AUTH, BEARER))
+        mockMvc.perform(multipart("/api/users/me/photo").file(file).header(X_USERNAME_HEADER, TEST_USERNAME))
                 .andExpect(status().isCreated())
                 .andExpect(content().string(containsString("base64img")));
     }
 
     @Test
-    @DisplayName("POST /api/users/me/photo without Authorization returns 401")
-    void uploadPhoto_missingHeader_unauthorized() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1});
-        mockMvc.perform(multipart("/api/users/me/photo").file(file))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
     @DisplayName("DELETE /api/users/me/photo deletes photo")
     void deletePhoto_noContent() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        doNothing().when(userService).deleteUserPhoto("john");
+        doNothing().when(userService).deleteUserPhoto(TEST_USERNAME);
 
-        mockMvc.perform(delete("/api/users/me/photo").header(AUTH, BEARER))
+        mockMvc.perform(delete("/api/users/me/photo").header(X_USERNAME_HEADER, TEST_USERNAME))
                 .andExpect(status().isNoContent());
 
-        verify(userService).deleteUserPhoto("john");
-    }
-
-    @Test
-    @DisplayName("DELETE /api/users/me/photo without Authorization returns 401")
-    void deletePhoto_missingHeader_unauthorized() throws Exception {
-        mockMvc.perform(delete("/api/users/me/photo"))
-                .andExpect(status().isUnauthorized());
+        verify(userService).deleteUserPhoto(TEST_USERNAME);
     }
 
     @Test
     @DisplayName("GET /api/users/me/languages returns list")
     void getMyLanguages_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        given(userService.getUserLanguagesByUsername("john")).willReturn(List.of(new UserLanguageDTO(new LanguageDTO("French"))));
+        given(userService.getUserLanguagesByUsername(TEST_USERNAME)).willReturn(List.of(new UserLanguageDTO(new LanguageDTO("French"))));
 
-        mockMvc.perform(get("/api/users/me/languages").header(AUTH, BEARER))
+        mockMvc.perform(get("/api/users/me/languages").header(X_USERNAME_HEADER, TEST_USERNAME))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("French")));
-    }
-
-    @Test
-    @DisplayName("GET /api/users/me/languages with invalid token returns 401")
-    void getMyLanguages_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-        mockMvc.perform(get("/api/users/me/languages").header(AUTH, BEARER))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test
     @DisplayName("PUT /api/users/me/languages replace list")
     void putMyLanguages_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        given(userService.replaceUserLanguages(ArgumentMatchers.eq("john"), ArgumentMatchers.any()))
+        given(userService.replaceUserLanguages(eq(TEST_USERNAME), any()))
                 .willReturn(List.of(new UserLanguageDTO(new LanguageDTO("French"))));
 
         mockMvc.perform(put("/api/users/me/languages")
-                        .header(AUTH, BEARER)
+                        .header(X_USERNAME_HEADER, TEST_USERNAME)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("langue_labels", List.of("French")))))
                 .andExpect(status().isOk())
@@ -212,44 +160,23 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/users/me/languages with invalid token returns 401")
-    void putMyLanguages_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-        mockMvc.perform(put("/api/users/me/languages")
-                        .header(AUTH, BEARER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("langue_labels", List.of("French")))))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
     @DisplayName("GET /api/users/me/specialisations returns list")
     void getMySpecialisations_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        given(userService.getUserSpecialisationsByUsername("john")).willReturn(List.of(new UserSpecialisationDTO(new SpecialisationDTO("Derm"))));
+        given(userService.getUserSpecialisationsByUsername(TEST_USERNAME)).willReturn(List.of(new UserSpecialisationDTO(new SpecialisationDTO("Derm"))));
 
-        mockMvc.perform(get("/api/users/me/specialisations").header(AUTH, BEARER))
+        mockMvc.perform(get("/api/users/me/specialisations").header(X_USERNAME_HEADER, TEST_USERNAME))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Derm")));
-    }
-
-    @Test
-    @DisplayName("GET /api/users/me/specialisations with invalid token returns 401")
-    void getMySpecialisations_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-        mockMvc.perform(get("/api/users/me/specialisations").header(AUTH, BEARER))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test
     @DisplayName("PUT /api/users/me/specialisations replace list")
     void putMySpecialisations_ok() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willReturn("john");
-        given(userService.replaceUserSpecialisations(ArgumentMatchers.eq("john"), ArgumentMatchers.any()))
+        given(userService.replaceUserSpecialisations(eq(TEST_USERNAME), any()))
                 .willReturn(List.of(new UserSpecialisationDTO(new SpecialisationDTO("Derm"))));
 
         mockMvc.perform(put("/api/users/me/specialisations")
-                        .header(AUTH, BEARER)
+                        .header(X_USERNAME_HEADER, TEST_USERNAME)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("specialisation_labels", List.of("Derm")))))
                 .andExpect(status().isOk())
@@ -257,13 +184,15 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/users/me/specialisations with invalid token returns 401")
-    void putMySpecialisations_unauthorized() throws Exception {
-        given(keycloakClientService.getUsernameFromToken(ArgumentMatchers.any())).willThrow(new IOException("bad token"));
-        mockMvc.perform(put("/api/users/me/specialisations")
-                        .header(AUTH, BEARER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("specialisation_labels", List.of("Derm")))))
-                .andExpect(status().isUnauthorized());
+    @DisplayName("GET /api/users/{username} returns public profile")
+    void getUserByUsername_ok() throws Exception {
+        KeycloakUser kcUser = new KeycloakUser(
+                "publicuser","public@example.com","Public","User",
+                null,null,null,null,null,null,null);
+        given(userService.getUserDataByUsername("publicuser")).willReturn(kcUser);
+
+        mockMvc.perform(get("/api/users/publicuser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("publicuser")));
     }
 }
