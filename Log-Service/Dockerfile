@@ -2,13 +2,13 @@ FROM eclipse-temurin:21-jdk AS build
 
 WORKDIR /workspace/app
 
-# Copy Maven wrapper and pom
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Copy Maven wrapper and pom from service directory
+COPY Log-Service/mvnw .
+COPY Log-Service/.mvn .mvn
+COPY Log-Service/pom.xml .
 
 # Copy source code
-COPY src src
+COPY Log-Service/src src
 
 # Build application
 RUN chmod +x mvnw
