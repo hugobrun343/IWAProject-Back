@@ -34,7 +34,8 @@
     <logger name="org.hibernate" level="WARN"/>
     <logger name="org.hibernate.SQL" level="INFO"/>
     
-    <!-- Reduce noise from Kafka -->
+    <!-- Reduce Kafka noise to prevent log loops -->
     <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="com.github.danielwegener.logback.kafka" level="WARN"/>
 </configuration>
 

@@ -1,0 +1,42 @@
+meta {
+  name: 1. Test Direct Access (Should Fail)
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:8089/api/users/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+docs {
+  # Test Direct Access to User-Service (DOIT ÉCHOUER)
+  
+  Cette requête tente d'accéder directement au User-Service sans passer par la Gateway.
+  
+  ## Résultat Attendu
+  **Status:** 403 Forbidden
+  
+  ```json
+  {
+    "error": "Access Denied: Invalid Gateway Secret"
+  }
+  ```
+  
+  ## Pourquoi ?
+  Le User-Service vérifie le header `X-Gateway-Secret`. 
+  Seule la Gateway possède ce secret.
+  
+  ## Logs générés
+  - User-Service: Log de refus d'accès (403)
+  
+  ## Sécurité
+  ✅ Les microservices ne peuvent être accédés que via la Gateway
+  ✅ Protection contre le bypass
+}
+

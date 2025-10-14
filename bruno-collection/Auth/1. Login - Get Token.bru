@@ -1,0 +1,45 @@
+meta {
+  name: 1. Login - Get Token
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{KEYCLOAK_URL}}/realms/{{KEYCLOAK_REALM}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{CLIENT_ID}}
+  client_secret: {{CLIENT_SECRET}}
+  username: john
+  password: password123
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const data = res.body;
+    bru.setEnvVar('ACCESS_TOKEN', data.access_token);
+    bru.setEnvVar('REFRESH_TOKEN', data.refresh_token);
+    console.log('✅ Token saved!');
+  }
+}
+
+docs {
+  # Login - Obtenir un token Keycloak
+  
+  Cette requête permet de s'authentifier et récupérer un token JWT.
+  
+  ## Paramètres
+  - username: Votre nom d'utilisateur Keycloak
+  - password: Votre mot de passe
+  
+  ## Résultat
+  Le token est automatiquement sauvé dans la variable `ACCESS_TOKEN`
+  
+  ## Logs générés
+  - Keycloak authentication logs
+}
+

@@ -27,8 +27,10 @@
         <appender-ref ref="KAFKA"/>
     </root>
 
-    <!-- Log Service specific logging -->
-    <logger name="com.iwaproject.log" level="DEBUG"/>
+    <!-- IMPORTANT: Exclude LogConsumer from Kafka to prevent infinite loop -->
+    <logger name="com.iwaproject.log.consumer.LogConsumer" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
     
     <!-- Reduce noise from Kafka -->
     <logger name="org.apache.kafka" level="WARN"/>

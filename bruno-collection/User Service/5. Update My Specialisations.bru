@@ -1,0 +1,36 @@
+meta {
+  name: 5. Update My Specialisations
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{GATEWAY_URL}}/api/users/me/specialisations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "specialisations": ["Java Developer", "Spring Expert", "Microservices Architect"]
+  }
+}
+
+docs {
+  # Update My Specialisations (Authentifié)
+  
+  Remplace toutes les spécialisations de l'utilisateur.
+  
+  ## Format
+  Array de labels de spécialisations (doivent exister dans la DB).
+  
+  ## Logs générés
+  - User-Service: log.info("PUT /users/me/specialisations - User: john")
+  - User-Service: log.info("Replacing specialisations for user: john with: [Java Developer, ...]")
+  - User-Service: log.info("Specialisations successfully updated for user: john")
+}
+

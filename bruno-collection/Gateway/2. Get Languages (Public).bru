@@ -1,0 +1,23 @@
+meta {
+  name: 2. Get Languages (Public)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/languages
+  body: none
+  auth: none
+}
+
+docs {
+  # Get Languages (Endpoint Public)
+  
+  Récupère la liste des langues disponibles.
+  Aucune authentification requise.
+  
+  ## Logs générés
+  - Gateway: log.debug("Unauthenticated request to: /api/languages")
+  - User-Service: Logs Spring Boot automatiques
+}
+

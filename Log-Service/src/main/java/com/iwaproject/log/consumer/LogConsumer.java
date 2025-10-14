@@ -42,11 +42,7 @@ public class LogConsumer {
             // Store in Elasticsearch
             logService.saveLog(logEntry);
 
-            log.debug("Log saved: [{}] {} ({}) - {}",
-                logEntry.getLevel(),
-                logEntry.getService(),
-                logEntry.getLogger(),
-                logEntry.getMessage());
+            // NOTE: Don't log here to avoid infinite loop
 
         } catch (Exception e) {
             log.error("Error processing log message: {}", message, e);

@@ -1,0 +1,33 @@
+meta {
+  name: 1. Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{GATEWAY_URL}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check Gateway
+  
+  Vérifie que la Gateway est UP et fonctionnelle.
+  
+  ## Logs générés
+  - Gateway: log.debug("Health check requested")
+  - Gateway: log.info("Health check completed - Status: UP")
+  
+  ## Résultat attendu
+  ```json
+  {
+    "status": "UP",
+    "service": "Gateway Service",
+    "timestamp": "2025-10-14T...",
+    "version": "1.0.0",
+    "message": "Gateway is running successfully!"
+  }
+  ```
+}
+

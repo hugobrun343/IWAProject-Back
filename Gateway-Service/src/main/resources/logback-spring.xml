@@ -36,5 +36,9 @@
     <!-- Reduce noise from Spring -->
     <logger name="org.springframework.web" level="WARN"/>
     <logger name="org.springframework.cloud.gateway" level="INFO"/>
+    
+    <!-- Reduce Kafka noise to prevent log loops -->
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="com.github.danielwegener.logback.kafka" level="WARN"/>
 </configuration>
 
