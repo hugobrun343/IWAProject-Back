@@ -266,11 +266,11 @@ services:
       SPRING_DATASOURCE_USERNAME: announcement_user
       SPRING_DATASOURCE_PASSWORD: announcement_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8081
+      SERVER_PORT: ${ANNOUNCEMENT_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8081:8081"
+      - "${ANNOUNCEMENT_SERVICE_PORT}:${ANNOUNCEMENT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       announcement-postgres:
@@ -289,11 +289,11 @@ services:
       SPRING_DATASOURCE_USERNAME: application_user
       SPRING_DATASOURCE_PASSWORD: application_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8082
+      SERVER_PORT: ${APPLICATION_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8082:8082"
+      - "${APPLICATION_SERVICE_PORT}:${APPLICATION_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       application-postgres:
@@ -312,11 +312,11 @@ services:
       SPRING_DATASOURCE_USERNAME: chat_user
       SPRING_DATASOURCE_PASSWORD: chat_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8083
+      SERVER_PORT: ${CHAT_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8083:8083"
+      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       chat-postgres:
@@ -335,11 +335,11 @@ services:
       SPRING_DATASOURCE_USERNAME: favorite_user
       SPRING_DATASOURCE_PASSWORD: favorite_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8084
+      SERVER_PORT: ${FAVORITE_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8084:8084"
+      - "${FAVORITE_SERVICE_PORT}:${FAVORITE_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       favorite-postgres:
@@ -361,11 +361,11 @@ services:
       ELASTICSEARCH_URIS: http://elasticsearch:9200
       ELASTICSEARCH_CONNECTION_TIMEOUT: ${ELASTICSEARCH_CONNECTION_TIMEOUT:-5s}
       ELASTICSEARCH_SOCKET_TIMEOUT: ${ELASTICSEARCH_SOCKET_TIMEOUT:-30s}
-      SERVER_PORT: 8086
+      SERVER_PORT: ${LOG_SERVICE_PORT}
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       CORS_GATEWAY_ORIGINS: ${CORS_GATEWAY_ORIGINS}
     ports:
-      - "8086:8086"
+      - "${LOG_SERVICE_PORT}:${LOG_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       kafka:
@@ -386,11 +386,11 @@ services:
       SPRING_DATASOURCE_USERNAME: payment_user
       SPRING_DATASOURCE_PASSWORD: payment_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8087
+      SERVER_PORT: ${PAYMENT_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8087:8087"
+      - "${PAYMENT_SERVICE_PORT}:${PAYMENT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       payment-postgres:
@@ -409,11 +409,11 @@ services:
       SPRING_DATASOURCE_USERNAME: rating_user
       SPRING_DATASOURCE_PASSWORD: rating_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8088
+      SERVER_PORT: ${RATING_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8088:8088"
+      - "${RATING_SERVICE_PORT}:${RATING_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       rating-postgres:
@@ -432,7 +432,7 @@ services:
       SPRING_DATASOURCE_USERNAME: user_user
       SPRING_DATASOURCE_PASSWORD: user_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8089
+      SERVER_PORT: ${USER_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_LOGS_TOPIC: microservices-logs
       KAFKA_USER_CONSUMER_GROUP_ID: ${KAFKA_USER_CONSUMER_GROUP_ID:-user-group}
@@ -447,7 +447,7 @@ services:
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       CORS_GATEWAY_ORIGINS: ${CORS_GATEWAY_ORIGINS}
     ports:
-      - "8089:8089"
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       user-postgres:
@@ -464,7 +464,7 @@ services:
     container_name: gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8085
+      SERVER_PORT: ${GATEWAY_SERVICE_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
@@ -480,7 +480,7 @@ services:
       RATING_SERVICE_URL: ${RATING_SERVICE_URL}
       CORS_FRONTEND_ORIGINS: ${CORS_FRONTEND_ORIGINS}
     ports:
-      - "8085:8085"
+      - "${GATEWAY_SERVICE_PORT}:${GATEWAY_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       - announcement-service

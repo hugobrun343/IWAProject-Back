@@ -39,8 +39,10 @@ public class RestTemplateConfig {
     @Bean
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
-        // Use HttpComponentsClientHttpRequestFactory to support PATCH method
-        restTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory());
+        // Use HttpComponentsClientHttpRequestFactory
+        // to support PATCH method
+        restTemplate.setRequestFactory(
+                new HttpComponentsClientHttpRequestFactory());
         restTemplate.setInterceptors(
                 Collections.singletonList(gatewayHeaderInterceptor())
         );
@@ -72,8 +74,10 @@ public class RestTemplateConfig {
                 if (auth != null && auth.getPrincipal() instanceof Jwt) {
                     Jwt jwt = (Jwt) auth.getPrincipal();
 
-                    // Only use preferred_username (real user), no fallback to azp
-                    String username = jwt.getClaimAsString("preferred_username");
+                    // Only use preferred_username
+                    // (real user), no fallback
+                    String username = jwt.getClaimAsString(
+                            "preferred_username");
                     String userId = jwt.getClaimAsString("sub");
 
                     if (username != null && !username.isEmpty()) {
