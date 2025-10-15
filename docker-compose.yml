@@ -235,7 +235,9 @@ services:
 # region Services
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    build:
+      context: ./Keycloak-Service
+      dockerfile: Dockerfile
     container_name: keycloak-service
     environment:
       KEYCLOAK_ADMIN: admin
