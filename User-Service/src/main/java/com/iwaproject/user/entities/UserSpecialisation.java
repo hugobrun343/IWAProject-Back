@@ -9,15 +9,25 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * User specialisation entity.
+ * User specialisation entity - links users to their chosen specialisations.
  */
 @Entity
-@Table(name = "user_specialisation")
+@Table(name = "user_specialisations")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserSpecialisation {
+
+    /**
+     * Maximum length for username.
+     */
+    private static final int MAX_USERNAME_LENGTH = 255;
+
     /**
      * Primary key.
      */
@@ -28,7 +38,7 @@ public class UserSpecialisation {
     /**
      * Username.
      */
-    @Column(name = "username", nullable = false)
+    @Column(name = "username", nullable = false, length = MAX_USERNAME_LENGTH)
     private String username;
 
     /**

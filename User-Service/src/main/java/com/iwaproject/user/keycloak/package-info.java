@@ -3,4 +3,3 @@
  * Contains Keycloak client and related utilities.
  */
 package com.iwaproject.user.keycloak;
-

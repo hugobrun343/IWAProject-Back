@@ -3,4 +3,3 @@
  * Contains DTOs for API communication.
  */
 package com.iwaproject.user.dto;
-

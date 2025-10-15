@@ -1,0 +1,31 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{KEYCLOAK_URL}}/realms/{{KEYCLOAK_REALM}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{CLIENT_ID}}
+  client_secret: {{CLIENT_SECRET}}
+  username: usertest
+  password: pwdtest
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const data = res.body;
+    bru.setEnvVar('ACCESS_TOKEN', data.access_token);
+    bru.setEnvVar('REFRESH_TOKEN', data.refresh_token);
+    console.log('✅ Token saved! Expires in', data.expires_in, 'seconds');
+    console.log('🔑 Access token:', data.access_token.substring(0, 50) + '...');
+  } else {
+    console.error('❌ Login failed:', res.status, res.body);
+  }
+}

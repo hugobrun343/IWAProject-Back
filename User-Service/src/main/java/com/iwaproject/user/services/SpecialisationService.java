@@ -1,6 +1,6 @@
 package com.iwaproject.user.services;
 
-import com.iwaproject.user.dto.SpecialisationDTO;
+import com.iwaproject.user.entities.Specialisation;
 import com.iwaproject.user.repositories.SpecialisationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -8,11 +8,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Service for specialisation management.
+ * Service for specialisation operations.
  */
 @Service
 @RequiredArgsConstructor
 public class SpecialisationService {
+
     /**
      * Specialisation repository.
      */
@@ -21,13 +22,9 @@ public class SpecialisationService {
     /**
      * Get all specialisations.
      *
-     * @return list of specialisation DTOs
+     * @return list of all specialisations
      */
-    public List<SpecialisationDTO> getAllSpecialisations() {
-        return specialisationRepository
-                .findAll()
-                .stream()
-                .map(s -> new SpecialisationDTO(s.getLabel()))
-                .toList();
+    public List<Specialisation> getAllSpecialisations() {
+        return specialisationRepository.findAll();
     }
 }

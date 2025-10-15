@@ -9,18 +9,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Specialisation entity.
+ * Specialisation entity - stores available specialisations.
  */
 @Entity
-@Table(name = "specialisation")
+@Table(name = "specialisations")
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Specialisation {
+
+    /**
+     * Maximum length for specialisation label.
+     */
+    private static final int MAX_LABEL_LENGTH = 100;
+
     /**
      * Specialisation label (primary key).
      */
     @Id
-    @Column(name = "label", nullable = false)
+    @Column(name = "label", length = MAX_LABEL_LENGTH, nullable = false)
     private String label;
 }

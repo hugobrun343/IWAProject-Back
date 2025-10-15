@@ -235,7 +235,7 @@ services:
 # region Services
 
   keycloak:
-    image: quay.io/keycloak/keycloak:20.0.5
+    image: quay.io/keycloak/keycloak:latest
     container_name: keycloak-service
     environment:
       KEYCLOAK_ADMIN: admin
@@ -468,6 +468,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      JWT_SKIP_ISSUER_VALIDATION: ${JWT_SKIP_ISSUER_VALIDATION}
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       USER_SERVICE_URL: ${USER_SERVICE_URL}
       ANNOUNCEMENT_SERVICE_URL: ${ANNOUNCEMENT_SERVICE_URL}

@@ -1,0 +1,16 @@
+meta {
+  name: Get My Languages
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/users/me/languages
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+

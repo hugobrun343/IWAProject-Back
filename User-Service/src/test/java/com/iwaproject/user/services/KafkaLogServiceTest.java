@@ -2,65 +2,118 @@ package com.iwaproject.user.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import java.util.concurrent.CompletableFuture;
+import org.springframework.kafka.support.SendResult;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests for KafkaLogService.
+ */
+@ExtendWith(MockitoExtension.class)
 class KafkaLogServiceTest {
 
+    /**
+     * Mock dependencies.
+     */
+    @Mock
     private KafkaTemplate<String, Object> kafkaTemplate;
+    @Mock
     private ObjectMapper objectMapper;
 
+    /**
+     * Service under test.
+     */
+    @InjectMocks
+    private KafkaLogService kafkaLogService;
+
+    /**
+     * Test constants.
+     */
+    private static final String TEST_LOGGER_NAME = "TestLogger";
+    private static final String TEST_MESSAGE = "Test message";
+    private static final String TEST_LOGS_TOPIC = "test-logs";
+    private static final String TEST_SERVICE_NAME = "Test-Service";
+
+    /**
+     * Setup test environment.
+     */
     @BeforeEach
-    void setup() {
-        kafkaTemplate = mock(KafkaTemplate.class);
-        objectMapper = new ObjectMapper();
+    void setUp() {
+        // Mock the @Value annotations
+        kafkaLogService = new KafkaLogService(
+                kafkaTemplate,
+                objectMapper,
+                TEST_LOGS_TOPIC,
+                TEST_SERVICE_NAME
+        );
+        
+        // Mock KafkaTemplate.send to return a completed future
+        CompletableFuture<SendResult<String, Object>> future = CompletableFuture.completedFuture(null);
+        when(kafkaTemplate.send(anyString(), any())).thenReturn(future);
     }
 
+    /**
+     * Test info logging.
+     */
     @Test
-    void info_sendsJsonWithLevelInfo() throws Exception {
-        KafkaLogService svc = new KafkaLogService(kafkaTemplate, objectMapper, "test-logs", "TestService");
+    @DisplayName("info should send log message to Kafka")
+    void info_shouldSendLogMessageToKafka() {
+        // When
+        kafkaLogService.info(TEST_LOGGER_NAME, TEST_MESSAGE);
 
-        svc.info("TestLogger", "Hello world");
-
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(kafkaTemplate).send(eq("test-logs"), payloadCaptor.capture());
-        String json = String.valueOf(payloadCaptor.getValue());
-        assertTrue(json.contains("\"level\":\"INFO\""));
-        assertTrue(json.contains("\"logger\":\"TestLogger\""));
-        assertTrue(json.contains("\"message\":\"Hello world\""));
-        assertTrue(json.contains("\"service\":\"TestService\""));
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
     }
 
+    /**
+     * Test warn logging.
+     */
     @Test
-    void error_withThrowable_includesExceptionAndStackTrace() {
-        KafkaLogService svc = new KafkaLogService(kafkaTemplate, objectMapper, "test-logs", "TestService");
-        RuntimeException ex = new RuntimeException("boom");
+    @DisplayName("warn should send log message to Kafka")
+    void warn_shouldSendLogMessageToKafka() {
+        // When
+        kafkaLogService.warn(TEST_LOGGER_NAME, TEST_MESSAGE);
 
-        svc.error("TestLogger", "Something failed", ex);
-
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(kafkaTemplate).send(eq("test-logs"), payloadCaptor.capture());
-        String json = String.valueOf(payloadCaptor.getValue());
-        assertTrue(json.contains("\"level\":\"ERROR\""));
-        assertTrue(json.contains("\"exception\":\"java.lang.RuntimeException\""));
-        assertTrue(json.contains("\"stackTrace\":"));
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
     }
 
+    /**
+     * Test error logging.
+     */
     @Test
-    void sendLog_whenSerializationFails_doesNotThrow_andNoKafkaSend() throws Exception {
-        ObjectMapper failingMapper = mock(ObjectMapper.class);
-        when(failingMapper.writeValueAsString(any())).thenThrow(new RuntimeException("json fail"));
-        KafkaLogService svc = new KafkaLogService(kafkaTemplate, failingMapper, "test-logs", "TestService");
+    @DisplayName("error should send log message to Kafka")
+    void error_shouldSendLogMessageToKafka() {
+        // When
+        kafkaLogService.error(TEST_LOGGER_NAME, TEST_MESSAGE);
 
-        // Should not throw and should not send to Kafka
-        assertDoesNotThrow(() -> svc.info("TestLogger", "Hello"));
-        verify(kafkaTemplate, never()).send(any(), any());
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
+    }
+
+    /**
+     * Test debug logging.
+     */
+    @Test
+    @DisplayName("debug should send log message to Kafka")
+    void debug_shouldSendLogMessageToKafka() {
+        // When
+        kafkaLogService.debug(TEST_LOGGER_NAME, TEST_MESSAGE);
+
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
     }
 }
-

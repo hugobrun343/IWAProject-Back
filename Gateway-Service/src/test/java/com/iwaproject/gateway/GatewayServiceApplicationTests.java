@@ -7,7 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * Gateway Service Application Tests.
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class GatewayServiceApplicationTests {
 

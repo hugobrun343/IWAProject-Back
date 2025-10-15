@@ -5,9 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /**
- * Repository for specialisations.
+ * Repository for Specialisation entity.
  */
 @Repository
-public interface SpecialisationRepository extends
-        JpaRepository<Specialisation, String> {
+public interface SpecialisationRepository
+        extends JpaRepository<Specialisation, String> {
 }

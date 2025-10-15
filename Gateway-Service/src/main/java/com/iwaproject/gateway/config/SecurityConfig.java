@@ -19,6 +19,21 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     /**
+     * Custom authentication entry point.
+     */
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
+    /**
+     * Constructor.
+     *
+     * @param entryPoint the custom authentication entry point
+     */
+    public SecurityConfig(
+            final CustomAuthenticationEntryPoint entryPoint) {
+        this.authenticationEntryPoint = entryPoint;
+    }
+
+    /**
      * Configure security filter chain.
      *
      * @param http the HttpSecurity to modify
@@ -36,6 +51,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (no authentication required)
                 .requestMatchers(
+                    "/health",
+                    "/test",
                     "/api/languages",
                     "/api/specialisations",
                     "/api/users/{username}",
@@ -45,6 +62,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
+                .authenticationEntryPoint(authenticationEntryPoint)
                 .jwt(jwt -> {
                     // JWT validation is configured
                     // via application.properties

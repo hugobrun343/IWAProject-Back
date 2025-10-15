@@ -9,15 +9,25 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * User language entity.
+ * User language entity - links users to their chosen languages.
  */
 @Entity
-@Table(name = "user_language")
+@Table(name = "user_languages")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserLanguage {
+
+    /**
+     * Maximum length for username.
+     */
+    private static final int MAX_USERNAME_LENGTH = 255;
+
     /**
      * Primary key.
      */
@@ -28,7 +38,7 @@ public class UserLanguage {
     /**
      * Username.
      */
-    @Column(name = "username", nullable = false)
+    @Column(name = "username", nullable = false, length = MAX_USERNAME_LENGTH)
     private String username;
 
     /**

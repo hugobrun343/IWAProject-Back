@@ -2,30 +2,45 @@ package com.iwaproject.user.repositories;
 
 import com.iwaproject.user.entities.UserSpecialisation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Repository for user specialisations.
+ * Repository for UserSpecialisation entity.
  */
 @Repository
-public interface UserSpecialisationRepository extends
-        JpaRepository<UserSpecialisation, Long> {
+public interface UserSpecialisationRepository
+        extends JpaRepository<UserSpecialisation, Long> {
 
     /**
-     * Find user specialisations by username.
+     * Find all specialisations for a user.
      *
      * @param username the username
-     * @return optional list of user specialisations
+     * @return list of user specialisations
      */
-    Optional<List<UserSpecialisation>> findByUsername(String username);
+    List<UserSpecialisation> findByUsername(String username);
 
     /**
-     * Delete user specialisations by username.
+     * Delete all specialisations for a user.
      *
      * @param username the username
      */
-    void deleteByUsername(String username);
+    @Modifying
+    @Query("DELETE FROM UserSpecialisation us "
+            + "WHERE us.username = :username")
+    void deleteByUsername(@Param("username") String username);
+
+    /**
+     * Check if user has a specific specialisation.
+     *
+     * @param username the username
+     * @param specialisationLabel the specialisation label
+     * @return true if user has the specialisation
+     */
+    boolean existsByUsernameAndSpecialisationLabel(
+            String username, String specialisationLabel);
 }

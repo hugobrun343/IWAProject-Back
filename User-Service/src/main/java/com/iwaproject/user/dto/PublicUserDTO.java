@@ -4,27 +4,53 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
- * DTO for public user information.
+ * DTO for public user information (visible to other users).
  */
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class PublicUserDTO {
-    /** Username. */
+
+    /**
+     * Username.
+     */
     private String username;
-    /** First name. */
+
+    /**
+     * First name.
+     */
     private String firstName;
-    /** Last name. */
+
+    /**
+     * Last name.
+     */
     private String lastName;
-    /** Phone number. */
-    private String telephone;
-    /** User description. */
+
+    /**
+     * Location.
+     */
+    private String location;
+
+    /**
+     * Description.
+     */
     private String description;
-    /** Profile photo URL. */
-    private String photoProfil;
-    /** Identity verification status. */
-    private Boolean verificationIdentite;
-    /** Registration date. */
-    private String dateInscription;
+
+    /**
+     * Profile photo URL.
+     */
+    private String profilePhoto;
+
+    /**
+     * Identity verification status.
+     */
+    private Boolean identityVerification;
+
+    /**
+     * Registration date.
+     */
+    private LocalDateTime registrationDate;
 }

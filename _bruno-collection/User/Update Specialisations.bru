@@ -1,0 +1,30 @@
+meta {
+  name: Update Specialisations
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{GATEWAY_URL}}/api/users/me/specialisations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "specialisationIds": ["plumber", "electrician", "carpenter"]
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Specialisations updated successfully');
+    console.log('🔧 Updated specialisations:', res.body);
+  } else {
+    console.error('❌ Failed to update specialisations:', res.status, res.body);
+  }
+}

@@ -4,43 +4,44 @@ import com.iwaproject.user.dto.LanguageDTO;
 import com.iwaproject.user.dto.PrivateUserDTO;
 import com.iwaproject.user.dto.PublicUserDTO;
 import com.iwaproject.user.dto.SpecialisationDTO;
-import com.iwaproject.user.dto.UserImageDTO;
 import com.iwaproject.user.dto.UserLanguageDTO;
-import com.iwaproject.user.dto.UserLanguagesResponseDTO;
 import com.iwaproject.user.dto.UserSpecialisationDTO;
-import com.iwaproject.user.keycloak.KeycloakUser;
+import com.iwaproject.user.entities.Language;
+import com.iwaproject.user.entities.Specialisation;
+import com.iwaproject.user.entities.User;
+import com.iwaproject.user.services.KafkaLogService;
 import com.iwaproject.user.services.LanguageService;
 import com.iwaproject.user.services.SpecialisationService;
 import com.iwaproject.user.services.UserService;
-import com.iwaproject.user.services.KafkaLogService;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * REST controller for user management.
+ * Main controller for user operations.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class UserController {
+
+    /**
+     * User service.
+     */
+    private final UserService userService;
 
     /**
      * Language service.
@@ -53,15 +54,9 @@ public class UserController {
     private final SpecialisationService specialisationService;
 
     /**
-     * User service.
-     */
-    private final UserService userService;
-
-    /**
      * Kafka log service.
      */
     private final KafkaLogService kafkaLogService;
-
 
     /**
      * Logger name constant.
@@ -69,263 +64,259 @@ public class UserController {
     private static final String LOGGER_NAME = "UserController";
 
     /**
-     * Get all languages.
+     * Get current user profile.
      *
-     * @return response entity with languages map
-     */
-    @GetMapping("/languages")
-    public ResponseEntity<Map<String, List<LanguageDTO>>>
-            getAllLanguages() {
-        kafkaLogService.info(LOGGER_NAME,
-                "GET /languages - Fetching all languages");
-        List<LanguageDTO> languages = languageService.getAllLanguages();
-        return ResponseEntity.ok(Map.of("languages", languages));
-    }
-
-    /**
-     * Get all specialisations.
-     *
-     * @return response entity with specialisations map
-     */
-    @GetMapping("/specialisations")
-    public ResponseEntity<Map<String, List<SpecialisationDTO>>>
-            getAllSpecialisations() {
-        kafkaLogService.info(LOGGER_NAME,
-                "GET /specialisations - Fetching all specialisations");
-        List<SpecialisationDTO> specialisations =
-                specialisationService.getAllSpecialisations();
-        Map<String, List<SpecialisationDTO>> body =
-                Map.of("specialisations", specialisations);
-        return ResponseEntity.ok(body);
-    }
-
-    /**
-     * Get my profile.
-     * Username is extracted from X-Username header (set by Gateway).
-     *
-     * @param username username from gateway header
-     * @return response entity with private user DTO
+     * @param username the username
+     * @return user profile
      */
     @GetMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> getMyProfile(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username) {
-        kafkaLogService.info(LOGGER_NAME,
-                "GET /users/me - User: " + username);
+            @RequestHeader("X-Username") final String username) {
 
-        KeycloakUser user = userService.getUserDataByUsername(username);
-        PrivateUserDTO privateUserDTO = new PrivateUserDTO(
-                user.getUsername(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getTelephone(),
-                user.getLocalisation(),
-                user.getDescription(),
-                user.getPhotoProfil(),
-                user.getVerificationIdentite(),
-                user.getPreferences(),
-                user.getDateInscription()
-        );
-        return ResponseEntity.ok(privateUserDTO);
+        kafkaLogService.info(LOGGER_NAME, "GET /users/me - User: " + username);
 
+        Optional<User> userOpt = userService.getUserByUsername(username);
+        if (userOpt.isEmpty()) {
+            kafkaLogService.warn(LOGGER_NAME, "User not found: " + username);
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOpt.get();
+        PrivateUserDTO dto = mapToPrivateUserDTO(user);
+
+        // Add email from Keycloak
+        String email = userService.getUserEmail(username);
+        if (email != null) {
+            dto.setEmail(email);
+        }
+
+        return ResponseEntity.ok(dto);
     }
 
     /**
-     * Update my profile.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Get public user profile.
      *
-     * @param username username from gateway header
-     * @param updates map of updates
-     * @return response entity with updated private user DTO
+     * @param username the username
+     * @return public user profile
+     */
+    @GetMapping("/users/{username}")
+    public ResponseEntity<PublicUserDTO> getUserProfile(
+            @PathVariable final String username) {
+
+        kafkaLogService.info(LOGGER_NAME, "GET /users/" + username);
+
+        Optional<User> userOpt = userService.getUserByUsername(username);
+        if (userOpt.isEmpty()) {
+            kafkaLogService.warn(LOGGER_NAME, "User not found: " + username);
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOpt.get();
+        PublicUserDTO dto = mapToPublicUserDTO(user);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Update user profile.
+     *
+     * @param username the username
+     * @param updates the updates to apply
+     * @return updated user profile
      */
     @PatchMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> updateMyProfile(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username,
+            @RequestHeader("X-Username") final String username,
             @RequestBody final Map<String, Object> updates) {
-        kafkaLogService.info(LOGGER_NAME,
-                "PATCH /users/me - User: " + username
-                + ", Updates: " + updates);
-        KeycloakUser updatedUser = userService.updateUserProfile(username,
-                updates);
-        PrivateUserDTO privateUserDTO = new PrivateUserDTO(
-                updatedUser.getUsername(),
-                updatedUser.getEmail(),
-                updatedUser.getFirstName(),
-                updatedUser.getLastName(),
-                updatedUser.getTelephone(),
-                updatedUser.getLocalisation(),
-                updatedUser.getDescription(),
-                updatedUser.getPhotoProfil(),
-                updatedUser.getVerificationIdentite(),
-                updatedUser.getPreferences(),
-                updatedUser.getDateInscription()
-        );
-        return ResponseEntity.ok(privateUserDTO);
-    }
 
-    /**
-     * Upload my photo.
-     * Username is extracted from X-Username header (set by Gateway).
-     *
-     * @param username username from gateway header
-     * @param file multipart file
-     * @return response entity with user image DTO
-     */
-    @PostMapping(value = "/users/me/photo",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UserImageDTO> uploadMyPhoto(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username,
-            @RequestParam("file") final MultipartFile file) {
         kafkaLogService.info(LOGGER_NAME,
-                "POST /users/me/photo - User: " + username
-                + ", File: " + file.getOriginalFilename());
-        UserImageDTO uploadedImage;
+                "PATCH /users/me - User: " + username);
+
         try {
-            uploadedImage = userService.uploadUserPhoto(username, file);
+            User updatedUser = userService.updateUserProfile(username, updates);
+            PrivateUserDTO dto = mapToPrivateUserDTO(updatedUser);
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             kafkaLogService.error(LOGGER_NAME,
-                    "Error uploading photo for user " + username
-                    + ": " + e.getMessage());
-            return ResponseEntity.status(
-                    HttpStatus.INTERNAL_SERVER_ERROR).build();
+                    "Failed to update profile: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(uploadedImage);
     }
 
     /**
-     * Delete my photo.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Get all available languages.
      *
-     * @param username username from gateway header
-     * @return response entity with no content
+     * @return list of languages
      */
-    @DeleteMapping("/users/me/photo")
-    public ResponseEntity<Void> deleteMyPhoto(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username) {
-        kafkaLogService.info(LOGGER_NAME,
-                "DELETE /users/me/photo - User: " + username);
-        userService.deleteUserPhoto(username);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/languages")
+    public ResponseEntity<List<LanguageDTO>> getLanguages() {
+        kafkaLogService.info(LOGGER_NAME, "GET /languages");
+
+        List<Language> languages = languageService.getAllLanguages();
+        List<LanguageDTO> dtos = languages.stream()
+                .map(lang -> new LanguageDTO(lang.getLabel()))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Get my languages.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Get all available specialisations.
      *
-     * @param username username from gateway header
-     * @return response entity with user languages response DTO
+     * @return list of specialisations
+     */
+    @GetMapping("/specialisations")
+    public ResponseEntity<List<SpecialisationDTO>> getSpecialisations() {
+        kafkaLogService.info(LOGGER_NAME, "GET /specialisations");
+
+        List<Specialisation> specialisations =
+                specialisationService.getAllSpecialisations();
+        List<SpecialisationDTO> dtos = specialisations.stream()
+                .map(spec -> new SpecialisationDTO(spec.getLabel()))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * Get user's chosen languages.
+     *
+     * @param username the username
+     * @return list of user languages
      */
     @GetMapping("/users/me/languages")
-    public ResponseEntity<List<UserLanguagesResponseDTO>> getMyLanguages(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username) {
+    public ResponseEntity<List<UserLanguageDTO>> getMyLanguages(
+            @RequestHeader("X-Username") final String username) {
+
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/me/languages - User: " + username);
+
         List<UserLanguageDTO> languages =
-                userService.getUserLanguagesByUsername(username);
-        List<String> labels = languages.stream()
-                .map(l -> l.getLanguage().getLabel()).toList();
-        return ResponseEntity.ok(
-                List.of(new UserLanguagesResponseDTO(labels)));
+                userService.getUserLanguages(username);
+        return ResponseEntity.ok(languages);
     }
 
     /**
-     * Replace my languages.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Update user's chosen languages.
      *
-     * @param username username from gateway header
-     * @param body request body with language labels
-     * @return response entity with user languages response DTO
+     * @param username the username
+     * @param request the request containing languages
+     * @return updated user languages
      */
-    @PutMapping("/users/me/languages")
-    public ResponseEntity<List<UserLanguagesResponseDTO>>
-            replaceMyLanguages(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username,
-            @RequestBody final Map<String, List<String>> body) {
-        List<String> languageLabels = body.get("langue_labels");
+    @PatchMapping("/users/me/languages")
+    public ResponseEntity<List<UserLanguageDTO>> updateMyLanguages(
+            @RequestHeader("X-Username") final String username,
+            @RequestBody final Map<String, List<String>> request) {
+
         kafkaLogService.info(LOGGER_NAME,
-                "PUT /users/me/languages - User: " + username
-                + ", languageLabels: " + languageLabels);
-        List<UserLanguageDTO> updatedLanguages =
-                userService.replaceUserLanguages(username, languageLabels);
-        List<String> labels = updatedLanguages.stream()
-                .map(l -> l.getLanguage().getLabel()).toList();
-        return ResponseEntity.ok(
-                List.of(new UserLanguagesResponseDTO(labels)));
+                "PATCH /users/me/languages - User: " + username);
+
+        try {
+            List<String> languageLabels = request.get("languages");
+            if (languageLabels == null) {
+                kafkaLogService.warn(LOGGER_NAME,
+                        "Missing 'languages' field in request");
+                return ResponseEntity.badRequest().build();
+            }
+
+            List<UserLanguageDTO> updatedLanguages =
+                    userService.updateUserLanguages(username, languageLabels);
+            return ResponseEntity.ok(updatedLanguages);
+        } catch (Exception e) {
+            kafkaLogService.error(LOGGER_NAME,
+                    "Failed to update languages: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**
-     * Get my specialisations.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Get user's chosen specialisations.
      *
-     * @param username username from gateway header
-     * @return response entity with user specialisation DTOs
+     * @param username the username
+     * @return list of user specialisations
      */
     @GetMapping("/users/me/specialisations")
-    public ResponseEntity<List<UserSpecialisationDTO>>
-            getMySpecialisations(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username) {
+    public ResponseEntity<List<UserSpecialisationDTO>> getMySpecialisations(
+            @RequestHeader("X-Username") final String username) {
+
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/me/specialisations - User: " + username);
+
         List<UserSpecialisationDTO> specialisations =
-                userService.getUserSpecialisationsByUsername(username);
+                userService.getUserSpecialisations(username);
         return ResponseEntity.ok(specialisations);
     }
 
     /**
-     * Replace my specialisations.
-     * Username is extracted from X-Username header (set by Gateway).
+     * Update user's chosen specialisations.
      *
-     * @param username username from gateway header
-     * @param body request body with specialisation labels
-     * @return response entity with user specialisation DTOs
+     * @param username the username
+     * @param request the request containing specialisations
+     * @return updated user specialisations
      */
-    @PutMapping("/users/me/specialisations")
-    public ResponseEntity<List<UserSpecialisationDTO>>
-            replaceMySpecialisations(
-            @RequestHeader(value = "X-Username", required = true)
-            final String username,
-            @RequestBody final Map<String, List<String>> body) {
-        List<String> specialisationLabels =
-                body.get("specialisation_labels");
+    @PatchMapping("/users/me/specialisations")
+    public ResponseEntity<List<UserSpecialisationDTO>> updateMySpecialisations(
+            @RequestHeader("X-Username") final String username,
+            @RequestBody final Map<String, List<String>> request) {
+
         kafkaLogService.info(LOGGER_NAME,
-                "PUT /users/me/specialisations - User: " + username
-                + ", specialisationLabels: " + specialisationLabels);
-        List<UserSpecialisationDTO> updatedSpecialisations =
-                userService.replaceUserSpecialisations(username,
-                        specialisationLabels);
-        return ResponseEntity.ok(updatedSpecialisations);
+                "PATCH /users/me/specialisations - User: " + username);
+
+        try {
+            List<String> specialisationLabels = request.get("specialisations");
+            if (specialisationLabels == null) {
+                kafkaLogService.warn(LOGGER_NAME,
+                        "Missing 'specialisations' field in request");
+                return ResponseEntity.badRequest().build();
+            }
+
+            List<UserSpecialisationDTO> updatedSpecialisations =
+                    userService.updateUserSpecialisations(username,
+                            specialisationLabels);
+            return ResponseEntity.ok(updatedSpecialisations);
+        } catch (Exception e) {
+            kafkaLogService.error(LOGGER_NAME,
+                    "Failed to update specialisations: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**
-     * Get user by username (public profile).
+     * Map User entity to PrivateUserDTO.
      *
-     * @param username the username
-     * @return response entity with public user DTO
+     * @param user the user entity
+     * @return private user DTO
      */
-    @GetMapping("/users/{username}")
-    public ResponseEntity<PublicUserDTO> getUserByUsername(
-            @PathVariable final String username) {
-        kafkaLogService.info(LOGGER_NAME,
-                "GET /users/" + username + " - Fetching public profile");
-        KeycloakUser user = userService.getUserDataByUsername(username);
-        PublicUserDTO publicUserDTO = new PublicUserDTO(
-                user.getUsername(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getTelephone(),
-                user.getDescription(),
-                user.getPhotoProfil(),
-                user.getVerificationIdentite(),
-                user.getDateInscription()
-        );
-        return ResponseEntity.ok(publicUserDTO);
+    private PrivateUserDTO mapToPrivateUserDTO(final User user) {
+        PrivateUserDTO dto = new PrivateUserDTO();
+        dto.setUsername(user.getUsername());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setLocation(user.getLocation());
+        dto.setDescription(user.getDescription());
+        dto.setProfilePhoto(user.getProfilePhoto());
+        dto.setIdentityVerification(user.getIdentityVerification());
+        dto.setPreferences(user.getPreferences());
+        dto.setRegistrationDate(user.getRegistrationDate());
+        return dto;
+    }
+
+    /**
+     * Map User entity to PublicUserDTO.
+     *
+     * @param user the user entity
+     * @return public user DTO
+     */
+    private PublicUserDTO mapToPublicUserDTO(final User user) {
+        PublicUserDTO dto = new PublicUserDTO();
+        dto.setUsername(user.getUsername());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setLocation(user.getLocation());
+        dto.setDescription(user.getDescription());
+        dto.setProfilePhoto(user.getProfilePhoto());
+        dto.setIdentityVerification(user.getIdentityVerification());
+        dto.setRegistrationDate(user.getRegistrationDate());
+        return dto;
     }
 }

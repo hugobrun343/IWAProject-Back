@@ -3,4 +3,3 @@
  * Contains JPA entity definitions.
  */
 package com.iwaproject.user.entities;
-
