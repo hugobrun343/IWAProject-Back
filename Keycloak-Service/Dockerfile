@@ -9,8 +9,10 @@ WORKDIR /app
 COPY keycloakify-theme-homeguard ./keycloakify-theme-homeguard
 COPY build-all-themes.sh ./
 
-RUN chmod +x build-all-themes.sh
-RUN ./build-all-themes.sh
+# Ensure Unix line endings and execute the build script
+RUN sed -i 's/\r$//' build-all-themes.sh \
+	&& chmod +x build-all-themes.sh \
+	&& ./build-all-themes.sh
 
 # Stage 2: Build Keycloak with custom themes
 FROM quay.io/keycloak/keycloak:latest AS builder
