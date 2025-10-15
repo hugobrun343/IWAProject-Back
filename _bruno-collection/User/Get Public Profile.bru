@@ -5,8 +5,11 @@ meta {
 }
 
 get {
-  url: {{GATEWAY_URL}}/api/users/admin
+  url: {{GATEWAY_URL}}/api/users/usertest
   body: none
-  auth: none
+  auth: bearer
 }
 
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}

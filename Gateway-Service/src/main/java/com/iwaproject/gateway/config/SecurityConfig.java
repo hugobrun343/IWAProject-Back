@@ -52,11 +52,7 @@ public class SecurityConfig {
                 // Public endpoints (no authentication required)
                 .requestMatchers(
                     "/health",
-                    "/test",
-                    "/api/languages",
-                    "/api/specialisations",
-                    "/api/users/{username}",
-                    "/actuator/health"
+                    "/test"
                 ).permitAll()
                 // All other requests require authentication
                 .anyRequest().authenticated()

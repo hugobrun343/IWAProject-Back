@@ -8,6 +8,7 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -38,6 +39,10 @@ public class RestTemplateConfig {
     @Bean
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
+        // Use HttpComponentsClientHttpRequestFactory
+        // to support PATCH method
+        restTemplate.setRequestFactory(
+                new HttpComponentsClientHttpRequestFactory());
         restTemplate.setInterceptors(
                 Collections.singletonList(gatewayHeaderInterceptor())
         );
@@ -58,9 +63,6 @@ public class RestTemplateConfig {
                     final ClientHttpRequestExecution execution)
                     throws IOException {
 
-                log.debug("Proxying request: {} {}",
-                        request.getMethod(), request.getURI());
-
                 // Always add Gateway secret
                 request.getHeaders().add("X-Gateway-Secret", gatewaySecret);
 
@@ -72,20 +74,18 @@ public class RestTemplateConfig {
                 if (auth != null && auth.getPrincipal() instanceof Jwt) {
                     Jwt jwt = (Jwt) auth.getPrincipal();
 
-                    String username = jwt
-                            .getClaimAsString("preferred_username");
+                    // Only use preferred_username
+                    // (real user), no fallback
+                    String username = jwt.getClaimAsString(
+                            "preferred_username");
                     String userId = jwt.getClaimAsString("sub");
 
-                    if (username != null) {
+                    if (username != null && !username.isEmpty()) {
                         request.getHeaders().add("X-Username", username);
-                        log.info("Proxying authenticated request "
-                                + "from user: {}", username);
                     }
                     if (userId != null) {
                         request.getHeaders().add("X-User-Id", userId);
                     }
-                } else {
-                    log.debug("Proxying unauthenticated request");
                 }
 
                 return execution.execute(request, body);
