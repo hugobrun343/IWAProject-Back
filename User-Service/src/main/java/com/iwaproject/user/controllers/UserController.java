@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -113,6 +114,23 @@ public class UserController {
     }
 
     /**
+     * Check if a user exists by username.
+     *
+     * @param username the username to check
+     * @return true if user exists, else false
+     */
+    @GetMapping("/users/exists")
+    public ResponseEntity<Boolean> userExists(
+            @RequestParam("username") final String username) {
+
+        kafkaLogService.info(LOGGER_NAME,
+                "GET /users/exists - username=" + username);
+
+        boolean exists = userService.userExists(username);
+        return ResponseEntity.ok(exists);
+    }
+
+    /**
      * Get current user profile.
      *
      * @param username the username
@@ -120,8 +138,16 @@ public class UserController {
      */
     @GetMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> getMyProfile(
-        @RequestHeader("X-Username") final String username,
-        @RequestHeader(value = "X-Email", required = false) final String emailHeader) {
+        @RequestHeader(value = "X-Username", required = false) final String usernameHeader,
+        @RequestHeader(value = "X-Email", required = false) final String emailHeader,
+        @RequestParam(value = "username", required = false) final String usernameParam) {
+        String username = (usernameParam != null && !usernameParam.isEmpty())
+                ? usernameParam : usernameHeader;
+        if (username == null || username.isEmpty()) {
+            kafkaLogService.warn(LOGGER_NAME,
+                    "GET /users/me - missing username (no query param and no header)");
+            return ResponseEntity.badRequest().build();
+        }
 
         kafkaLogService.info(LOGGER_NAME, "GET /users/me - User: " + username);
 

@@ -71,6 +71,26 @@ public class UserService {
     }
 
     /**
+     * Check if a user exists by username.
+     *
+     * Contract:
+     * - Input: non-null username
+     * - Output: true if a user row exists, false otherwise
+     * - Errors: none, delegates to repository which returns boolean
+     *
+     * @param username the username to check
+     * @return true if user exists, otherwise false
+     */
+    public boolean userExists(final String username) {
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+        boolean exists = userRepository.existsByUsername(username);
+        log.debug("User exists check for '{}': {}", username, exists);
+        return exists;
+    }
+
+    /**
      * Get user email from Keycloak.
      *
      * @param username the username

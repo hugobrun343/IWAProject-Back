@@ -1,6 +1,8 @@
 package com.iwaproject.user.keycloak;
 
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -19,29 +21,39 @@ import java.util.List;
 @Service
 public class KeycloakClientService {
 
+    private static final Logger log = LoggerFactory.getLogger(KeycloakClientService.class);
+
     /**
      * Keycloak server URL.
      */
     @Value("${keycloak.server-url}")
     private String serverUrl;
 
-    /**
-     * Keycloak realm.
-     */
-    @Value("${keycloak.realm}")
-    private String realm;
+        /**
+         * Application realm (where business users live).
+         */
+        @Value("${keycloak.realm}")
+        private String realm;
 
-    /**
-     * Keycloak client ID.
-     */
-    @Value("${keycloak.client-id}")
-    private String clientId;
+        /**
+         * Admin realm used to authenticate as admin (default: master).
+         * Tokens issued from this realm can administer other realms.
+         */
+        @Value("${keycloak.admin-realm:master}")
+        private String adminRealm;
 
-    /**
-     * Keycloak client secret.
-     */
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
+        /**
+         * Admin client ID used for admin authentication (default: admin-cli).
+         * If you use a custom confidential client with service account, set it here.
+         */
+        @Value("${keycloak.admin-client-id:admin-cli}")
+        private String adminClientId;
+
+        /**
+         * Optional client secret. Not required for admin-cli.
+         */
+        @Value("${keycloak.client-secret:}")
+        private String clientSecret;
 
     /**
      * Keycloak admin username.
@@ -60,21 +72,29 @@ public class KeycloakClientService {
      */
     private Keycloak keycloak;
 
-    /**
-     * Initialize Keycloak client.
-     */
-    @PostConstruct
-    public void init() {
-        this.keycloak = KeycloakBuilder.builder()
-                .serverUrl(serverUrl)
-                .realm(realm)
-                .grantType(OAuth2Constants.PASSWORD)
-                .clientId(clientId)
-                .clientSecret(clientSecret)
-                .username(adminUsername)
-                .password(adminPassword)
-                .build();
-    }
+        /**
+         * Initialize Keycloak client.
+         */
+        @PostConstruct
+        public void init() {
+                log.info("Initializing Keycloak admin client. serverUrl={}, adminRealm={}, appRealm={}",
+                                serverUrl, adminRealm, realm);
+
+                KeycloakBuilder builder = KeycloakBuilder.builder()
+                                .serverUrl(serverUrl)
+                                // Authenticate against admin realm (typically 'master')
+                                .realm(adminRealm)
+                                .grantType(OAuth2Constants.PASSWORD)
+                                .clientId(adminClientId)
+                                .username(adminUsername)
+                                .password(adminPassword);
+
+                if (clientSecret != null && !clientSecret.isBlank()) {
+                        builder.clientSecret(clientSecret);
+                }
+
+                this.keycloak = builder.build();
+        }
 
     /**
      * Get user email by username from Keycloak.
@@ -83,18 +103,30 @@ public class KeycloakClientService {
      * @return user email
      */
     public String getEmailByUsername(final String username) {
-        List<UserRepresentation> users = keycloak.realm(realm)
-                .users()
-                .search(username);
+        try {
+            List<UserRepresentation> users = keycloak.realm(realm)
+                    .users()
+                    .search(username);
 
-        UserRepresentation user = users.stream()
-                .filter(u -> u.getUsername() != null
-                        && u.getUsername().equalsIgnoreCase(username))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Keycloak user not found for username: " + username));
+            log.debug("Keycloak search for username='{}' returned {} result(s)",
+                    username, users != null ? users.size() : 0);
 
-        return user.getEmail();
+            UserRepresentation user = users.stream()
+                    .filter(u -> u.getUsername() != null
+                            && u.getUsername().equalsIgnoreCase(username))
+                    .findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Keycloak user not found for username: " + username));
+
+            return user.getEmail();
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            // Let caller decide how to handle; most callers treat as optional
+            log.warn("Failed to retrieve email from Keycloak for user '{}': {}",
+                    username, ex.getMessage());
+            return null;
+        }
     }
 }

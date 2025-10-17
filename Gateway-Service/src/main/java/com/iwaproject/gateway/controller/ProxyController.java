@@ -55,6 +55,10 @@ public class ProxyController {
 
         String path = request.getRequestURI();
         String targetUrl = userServiceUrl + path;
+        String queryString = request.getQueryString();
+        if (queryString != null && !queryString.isEmpty()) {
+            targetUrl = targetUrl + "?" + queryString;
+        }
 
         log.debug("Proxying {} {} to User-Service",
                 request.getMethod(), path);
@@ -75,26 +79,41 @@ public class ProxyController {
 
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
 
-        ResponseEntity<byte[]> serviceResponse = restTemplate.exchange(
-                targetUrl,
-                method,
-                entity,
-                byte[].class
-        );
+        try {
+            ResponseEntity<byte[]> serviceResponse = restTemplate.exchange(
+                    targetUrl,
+                    method,
+                    entity,
+                    byte[].class
+            );
 
-        // Build sanitized response entity: don't forward transfer-encoding or content-length
-        HttpHeaders outHeaders = new HttpHeaders();
-        serviceResponse.getHeaders().forEach((name, values) -> {
-            if (!name.equalsIgnoreCase("transfer-encoding")
-                    && !name.equalsIgnoreCase("content-length")) {
-                for (String v : values) {
-                    outHeaders.add(name, v);
+            // Build sanitized response entity: don't forward transfer-encoding or content-length
+            HttpHeaders outHeaders = new HttpHeaders();
+            serviceResponse.getHeaders().forEach((name, values) -> {
+                if (!name.equalsIgnoreCase("transfer-encoding")
+                        && !name.equalsIgnoreCase("content-length")) {
+                    for (String v : values) {
+                        outHeaders.add(name, v);
+                    }
                 }
-            }
-        });
+            });
 
-        return new ResponseEntity<>(serviceResponse.getBody(), outHeaders,
-                serviceResponse.getStatusCode());
+            return new ResponseEntity<>(serviceResponse.getBody(), outHeaders,
+                    serviceResponse.getStatusCode());
+        } catch (org.springframework.web.client.HttpStatusCodeException ex) {
+            // Forward non-2xx status from service instead of converting to 500
+            HttpHeaders outHeaders = new HttpHeaders();
+            ex.getResponseHeaders().forEach((name, values) -> {
+                if (!name.equalsIgnoreCase("transfer-encoding")
+                        && !name.equalsIgnoreCase("content-length")) {
+                    for (String v : values) {
+                        outHeaders.add(name, v);
+                    }
+                }
+            });
+            byte[] bodyBytes = ex.getResponseBodyAsByteArray();
+            return new ResponseEntity<>(bodyBytes, outHeaders, ex.getStatusCode());
+        }
     }
 
     /**
