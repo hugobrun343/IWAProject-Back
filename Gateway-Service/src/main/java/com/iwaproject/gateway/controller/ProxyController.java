@@ -2,7 +2,8 @@ package com.iwaproject.gateway.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -21,10 +22,11 @@ import java.util.Enumeration;
  * Proxy controller that forwards requests to microservices.
  * Adds authentication headers via RestTemplate interceptor.
  */
-@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class ProxyController {
+
+    private static final Logger log = LoggerFactory.getLogger(ProxyController.class);
 
     /**
      * RestTemplate with gateway header interceptor.
@@ -47,9 +49,9 @@ public class ProxyController {
      */
     @RequestMapping("/api/users/**")
     public ResponseEntity<byte[]> proxyToUserService(
-            final HttpServletRequest request,
-            @RequestBody(required = false) final byte[] body,
-            final HttpServletResponse response) throws IOException {
+        final HttpServletRequest request,
+        @RequestBody(required = false) final byte[] body,
+        final HttpServletResponse response) throws IOException {
 
         String path = request.getRequestURI();
         String targetUrl = userServiceUrl + path;
@@ -80,17 +82,19 @@ public class ProxyController {
                 byte[].class
         );
 
-        // Copy response headers and status
-        HttpHeaders responseHeaders = serviceResponse.getHeaders();
-        for (String headerName : responseHeaders.keySet()) {
-            if (!headerName.equalsIgnoreCase("transfer-encoding")) {
-                response.setHeader(headerName,
-                        responseHeaders.getFirst(headerName));
+        // Build sanitized response entity: don't forward transfer-encoding or content-length
+        HttpHeaders outHeaders = new HttpHeaders();
+        serviceResponse.getHeaders().forEach((name, values) -> {
+            if (!name.equalsIgnoreCase("transfer-encoding")
+                    && !name.equalsIgnoreCase("content-length")) {
+                for (String v : values) {
+                    outHeaders.add(name, v);
+                }
             }
-        }
-        response.setStatus(serviceResponse.getStatusCode().value());
+        });
 
-        return serviceResponse;
+        return new ResponseEntity<>(serviceResponse.getBody(), outHeaders,
+                serviceResponse.getStatusCode());
     }
 
     /**

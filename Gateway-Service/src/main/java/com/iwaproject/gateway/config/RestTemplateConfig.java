@@ -79,12 +79,16 @@ public class RestTemplateConfig {
                     String username = jwt.getClaimAsString(
                             "preferred_username");
                     String userId = jwt.getClaimAsString("sub");
+                    String email = jwt.getClaimAsString("email");
 
                     if (username != null && !username.isEmpty()) {
                         request.getHeaders().add("X-Username", username);
                     }
                     if (userId != null) {
                         request.getHeaders().add("X-User-Id", userId);
+                    }
+                    if (email != null && !email.isEmpty()) {
+                        request.getHeaders().add("X-Email", email);
                     }
                 }
 

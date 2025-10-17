@@ -52,7 +52,12 @@ public class SecurityConfig {
                 // Public endpoints (no authentication required)
                 .requestMatchers(
                     "/health",
-                    "/test"
+                    "/test",
+                    // Swagger UI & OpenAPI
+                    "/v3/api-docs",
+                    "/v3/api-docs/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**"
                 ).permitAll()
                 // All other requests require authentication
                 .anyRequest().authenticated()

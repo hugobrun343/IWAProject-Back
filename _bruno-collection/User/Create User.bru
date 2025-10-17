@@ -1,0 +1,39 @@
+meta {
+  name: Create User
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{GATEWAY_URL}}/api/users
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+33123456789",
+    "location": "Paris, France",
+    "description": "New user profile created via Bruno",
+    "preferences": "{}"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    console.log('✅ User created successfully');
+    console.log('👤 Username:', res.body.username);
+    console.log('👨‍💼 First name:', res.body.firstName);
+    console.log('👨‍💼 Last name:', res.body.lastName);
+  } else if (res.status === 409) {
+    console.warn('⚠️ User already exists');
+  } else {
+    console.error('❌ Failed to create user:', res.status, res.body);
+  }
+}

@@ -10,6 +10,10 @@ get {
   auth: none
 }
 
+headers {
+  Authorization: Bearer {{ACCESS_TOKEN}}
+}
+
 script:post-response {
   if (res.status === 200) {
     console.log('✅ Languages retrieved:', res.body.length, 'languages');

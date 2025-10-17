@@ -155,6 +155,60 @@ public class UserService {
     }
 
     /**
+     * Create user profile from a payload map.
+     *
+     * @param username the username
+     * @param payload  payload with optional fields
+     * @return created user
+     */
+    @Transactional
+    public User createUserProfile(final String username,
+            final Map<String, Object> payload) {
+        log.info("Creating user profile (map) for: {}", username);
+
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new IllegalStateException("User already exists");
+        }
+
+        User user = new User();
+        user.setUsername(username);
+
+        Object firstName = payload.get("firstName");
+        Object lastName = payload.get("lastName");
+        if (firstName == null || lastName == null) {
+            throw new IllegalArgumentException(
+                    "firstName and lastName are required");
+        }
+        user.setFirstName((String) firstName);
+        user.setLastName((String) lastName);
+
+        // Optional fields
+        if (payload.containsKey("phoneNumber")) {
+            user.setPhoneNumber((String) payload.get("phoneNumber"));
+        }
+        if (payload.containsKey("location")) {
+            user.setLocation((String) payload.get("location"));
+        }
+        if (payload.containsKey("description")) {
+            user.setDescription((String) payload.get("description"));
+        }
+        if (payload.containsKey("profilePhoto")) {
+            user.setProfilePhoto((String) payload.get("profilePhoto"));
+        }
+        if (payload.containsKey("identityVerification")) {
+            Object iv = payload.get("identityVerification");
+            if (iv instanceof Boolean) {
+                user.setIdentityVerification((Boolean) iv);
+            }
+        }
+        if (payload.containsKey("preferences")) {
+            user.setPreferences((String) payload.get("preferences"));
+        }
+
+        return userRepository.save(user);
+    }
+
+    /**
      * Get user's chosen languages.
      *
      * @param username the username
@@ -178,7 +232,7 @@ public class UserService {
     @Transactional
     public List<UserLanguageDTO> updateUserLanguages(final String username,
             final List<String> languageLabels) {
-        log.info("Updating languages for user: {}", username);
+        log.info("Updating languages for user: {} with languages: {}", username, languageLabels);
         userLanguageRepository.deleteByUsername(username);
 
         List<UserLanguage> newLanguages = languageLabels.stream()
