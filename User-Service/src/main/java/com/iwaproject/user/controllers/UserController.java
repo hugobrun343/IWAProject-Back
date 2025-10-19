@@ -6,6 +6,7 @@ import com.iwaproject.user.dto.PublicUserDTO;
 import com.iwaproject.user.dto.SpecialisationDTO;
 import com.iwaproject.user.dto.UserLanguageDTO;
 import com.iwaproject.user.dto.UserSpecialisationDTO;
+import com.iwaproject.user.dto.UserProfileCompletionDTO;
 import com.iwaproject.user.entities.Language;
 import com.iwaproject.user.entities.Specialisation;
 import com.iwaproject.user.entities.User;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.iwaproject.user.dto.UserExistenceDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -120,14 +122,15 @@ public class UserController {
      * @return true if user exists, else false
      */
     @GetMapping("/users/exists")
-    public ResponseEntity<Boolean> userExists(
+    public ResponseEntity<UserExistenceDTO> userExists(
             @RequestParam("username") final String username) {
 
         kafkaLogService.info(LOGGER_NAME,
                 "GET /users/exists - username=" + username);
 
         boolean exists = userService.userExists(username);
-        return ResponseEntity.ok(exists);
+        UserExistenceDTO dto = new UserExistenceDTO(username, exists);
+        return ResponseEntity.ok(dto);
     }
 
     /**
@@ -369,6 +372,26 @@ public class UserController {
                     "Failed to update specialisations: " + e.getMessage());
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * Check whether a given user's profile is complete.
+     *
+     * @param username the username to check
+     * @return UserProfileCompletionDTO containing username and completion flag
+     */
+    @GetMapping("/users/{username}/profile-complete")
+    public ResponseEntity<UserProfileCompletionDTO> isUserProfileComplete(
+            @PathVariable("username") final String username) {
+        kafkaLogService.info(LOGGER_NAME,
+                "GET /users/" + username + "/profile-complete");
+
+        if (userService.getUserByUsername(username).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        boolean complete = userService.isUserProfileComplete(username);
+        return ResponseEntity.ok(new UserProfileCompletionDTO(username, complete));
     }
 
     /**

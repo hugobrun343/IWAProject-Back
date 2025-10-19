@@ -60,6 +60,37 @@ public class UserService {
     private final KeycloakClientService keycloakClientService;
 
     /**
+     * Determine if a user's profile is complete based on required fields.
+     *
+     * Contract:
+     * - Input: username (non-null)
+     * - Output: true if all required fields are present/valid, else false
+     * - Required fields (assumed): firstName, lastName, phoneNumber, location
+     *   and at least one language and one specialisation.
+     * - If user doesn't exist: returns false.
+     */
+    public boolean isUserProfileComplete(final String username) {
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+        User user = userOpt.get();
+
+        boolean hasNames = user.getFirstName() != null && !user.getFirstName().isBlank()
+                && user.getLastName() != null && !user.getLastName().isBlank();
+        boolean hasPhone = user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank();
+        boolean hasLocation = user.getLocation() != null && !user.getLocation().isBlank();
+
+        boolean hasLanguages = !userLanguageRepository.findByUsername(username).isEmpty();
+        boolean hasSpecialisations = !userSpecialisationRepository.findByUsername(username).isEmpty();
+
+        return hasNames && hasPhone && hasLocation && hasLanguages && hasSpecialisations;
+    }
+
+    /**
      * Get user by username.
      *
      * @param username the username
