@@ -68,6 +68,9 @@ public class UserService {
      * - Required fields (assumed): firstName, lastName, phoneNumber, location
      *   and at least one language and one specialisation.
      * - If user doesn't exist: returns false.
+     *
+     * @param username the username to evaluate
+     * @return true if the profile is complete, otherwise false
      */
     public boolean isUserProfileComplete(final String username) {
         if (username == null || username.isBlank()) {
@@ -79,15 +82,25 @@ public class UserService {
         }
         User user = userOpt.get();
 
-        boolean hasNames = user.getFirstName() != null && !user.getFirstName().isBlank()
-                && user.getLastName() != null && !user.getLastName().isBlank();
-        boolean hasPhone = user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank();
-        boolean hasLocation = user.getLocation() != null && !user.getLocation().isBlank();
+        boolean hasNames =
+                (user.getFirstName() != null
+                        && !user.getFirstName().isBlank())
+                && (user.getLastName() != null
+                        && !user.getLastName().isBlank());
+        boolean hasPhone =
+                user.getPhoneNumber() != null
+                        && !user.getPhoneNumber().isBlank();
+        boolean hasLocation =
+                user.getLocation() != null
+                        && !user.getLocation().isBlank();
 
-        boolean hasLanguages = !userLanguageRepository.findByUsername(username).isEmpty();
-        boolean hasSpecialisations = !userSpecialisationRepository.findByUsername(username).isEmpty();
+        boolean hasLanguages = !userLanguageRepository
+                .findByUsername(username).isEmpty();
+        boolean hasSpecialisations = !userSpecialisationRepository
+                .findByUsername(username).isEmpty();
 
-        return hasNames && hasPhone && hasLocation && hasLanguages && hasSpecialisations;
+        return hasNames && hasPhone && hasLocation
+                && hasLanguages && hasSpecialisations;
     }
 
     /**
@@ -283,7 +296,9 @@ public class UserService {
     @Transactional
     public List<UserLanguageDTO> updateUserLanguages(final String username,
             final List<String> languageLabels) {
-        log.info("Updating languages for user: {} with languages: {}", username, languageLabels);
+        log.info(
+                "Updating languages for user: {} with languages: {}",
+                username, languageLabels);
         userLanguageRepository.deleteByUsername(username);
 
         List<UserLanguage> newLanguages = languageLabels.stream()

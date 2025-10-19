@@ -26,7 +26,11 @@ import java.util.Enumeration;
 @RequiredArgsConstructor
 public class ProxyController {
 
-    private static final Logger log = LoggerFactory.getLogger(ProxyController.class);
+    /**
+     * Logger instance.
+     */
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(ProxyController.class);
 
     /**
      * RestTemplate with gateway header interceptor.
@@ -60,7 +64,7 @@ public class ProxyController {
             targetUrl = targetUrl + "?" + queryString;
         }
 
-        log.debug("Proxying {} {} to User-Service",
+        LOGGER.debug("Proxying {} {} to User-Service",
                 request.getMethod(), path);
 
         // Copy headers (except Host)
@@ -87,7 +91,8 @@ public class ProxyController {
                     byte[].class
             );
 
-            // Build sanitized response entity: don't forward transfer-encoding or content-length
+            // Build sanitized response entity:
+            // don't forward transfer-encoding or content-length
             HttpHeaders outHeaders = new HttpHeaders();
             serviceResponse.getHeaders().forEach((name, values) -> {
                 if (!name.equalsIgnoreCase("transfer-encoding")
@@ -112,7 +117,8 @@ public class ProxyController {
                 }
             });
             byte[] bodyBytes = ex.getResponseBodyAsByteArray();
-            return new ResponseEntity<>(bodyBytes, outHeaders, ex.getStatusCode());
+            return new ResponseEntity<>(
+                    bodyBytes, outHeaders, ex.getStatusCode());
         }
     }
 
@@ -130,7 +136,7 @@ public class ProxyController {
 
         String targetUrl = userServiceUrl + "/api/languages";
 
-        log.debug("Proxying GET /api/languages to User-Service");
+        LOGGER.debug("Proxying GET /api/languages to User-Service");
 
         HttpHeaders headers = new HttpHeaders();
         HttpEntity<byte[]> entity = new HttpEntity<>(headers);
@@ -169,7 +175,7 @@ public class ProxyController {
 
         String targetUrl = userServiceUrl + "/api/specialisations";
 
-        log.debug("Proxying GET /api/specialisations to User-Service");
+        LOGGER.debug("Proxying GET /api/specialisations to User-Service");
 
         HttpHeaders headers = new HttpHeaders();
         HttpEntity<byte[]> entity = new HttpEntity<>(headers);

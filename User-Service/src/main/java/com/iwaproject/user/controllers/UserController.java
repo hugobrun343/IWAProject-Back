@@ -69,16 +69,23 @@ public class UserController {
     private static final String LOGGER_NAME = "UserController";
 
     /**
+     * HTTP status code for conflict.
+     */
+    private static final int HTTP_STATUS_CONFLICT = 409;
+
+    /**
      * Create a new user profile.
      *
      * @param username the username (from gateway/keycloak)
+     * @param emailHeader optional email propagated by gateway
      * @param payload  the request body containing profile fields
      * @return created user profile
      */
     @PostMapping("/users")
     public ResponseEntity<PrivateUserDTO> createUser(
         @RequestHeader("X-Username") final String username,
-        @RequestHeader(value = "X-Email", required = false) final String emailHeader,
+        @RequestHeader(value = "X-Email", required = false)
+            final String emailHeader,
             @RequestBody final Map<String, Object> payload) {
 
         kafkaLogService.info(LOGGER_NAME,
@@ -99,7 +106,9 @@ public class UserController {
             // Prefer email propagated by Gateway, fallback to Keycloak lookup
             String email = (emailHeader != null && !emailHeader.isEmpty())
                     ? emailHeader : userService.getUserEmail(username);
-            if (email != null && !email.isEmpty()) dto.setEmail(email);
+            if (email != null && !email.isEmpty()) {
+                dto.setEmail(email);
+            }
 
             return ResponseEntity.created(
                             URI.create("/api/users/" + username))
@@ -107,7 +116,7 @@ public class UserController {
         } catch (IllegalStateException e) {
             kafkaLogService.warn(LOGGER_NAME,
                     "User already exists: " + username);
-            return ResponseEntity.status(409).build();
+            return ResponseEntity.status(HTTP_STATUS_CONFLICT).build();
         } catch (Exception e) {
             kafkaLogService.error(LOGGER_NAME,
                     "Failed to create user: " + e.getMessage());
@@ -136,19 +145,26 @@ public class UserController {
     /**
      * Get current user profile.
      *
-     * @param username the username
+     * @param usernameHeader username from header (optional)
+     * @param emailHeader optional email propagated by gateway
+     * @param usernameParam username as query parameter (optional)
      * @return user profile
      */
     @GetMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> getMyProfile(
-        @RequestHeader(value = "X-Username", required = false) final String usernameHeader,
-        @RequestHeader(value = "X-Email", required = false) final String emailHeader,
-        @RequestParam(value = "username", required = false) final String usernameParam) {
+        @RequestHeader(value = "X-Username", required = false)
+            final String usernameHeader,
+        @RequestHeader(value = "X-Email", required = false)
+            final String emailHeader,
+        @RequestParam(value = "username", required = false)
+            final String usernameParam) {
         String username = (usernameParam != null && !usernameParam.isEmpty())
                 ? usernameParam : usernameHeader;
         if (username == null || username.isEmpty()) {
-            kafkaLogService.warn(LOGGER_NAME,
-                    "GET /users/me - missing username (no query param and no header)");
+            kafkaLogService.warn(
+                    LOGGER_NAME,
+                    "GET /users/me - missing username"
+                            + "(no query param and no header)");
             return ResponseEntity.badRequest().build();
         }
 
@@ -163,22 +179,25 @@ public class UserController {
         User user = userOpt.get();
         PrivateUserDTO dto = mapToPrivateUserDTO(user);
 
-    // Prefer email propagated by Gateway, fallback to Keycloak lookup
-    String email = (emailHeader != null && !emailHeader.isEmpty())
-        ? emailHeader : userService.getUserEmail(username);
-    kafkaLogService.debug(LOGGER_NAME,
-        "user data: username=" + dto.getUsername() + 
-        ", email=" + email + 
-        ", firstName=" + dto.getFirstName() + 
-        ", lastName=" + dto.getLastName() + 
-        ", phoneNumber=" + dto.getPhoneNumber() + 
-        ", location=" + dto.getLocation() + 
-        ", description=" + dto.getDescription() + 
-        ", profilePhoto=" + dto.getProfilePhoto() + 
-        ", identityVerification=" + dto.getIdentityVerification() + 
-        ", preferences=" + dto.getPreferences() + 
-        ", registrationDate=" + dto.getRegistrationDate());
-    if (email != null && !email.isEmpty()) dto.setEmail(email);
+        // Prefer email propagated by Gateway, fallback to Keycloak lookup
+        String email = (emailHeader != null && !emailHeader.isEmpty())
+            ? emailHeader : userService.getUserEmail(username);
+        kafkaLogService.debug(
+            LOGGER_NAME,
+            "user data: username=" + dto.getUsername()
+                + ", email=" + email
+                + ", firstName=" + dto.getFirstName()
+                + ", lastName=" + dto.getLastName()
+                + ", phoneNumber=" + dto.getPhoneNumber()
+                + ", location=" + dto.getLocation()
+                + ", description=" + dto.getDescription()
+                + ", profilePhoto=" + dto.getProfilePhoto()
+                + ", identityVerification=" + dto.getIdentityVerification()
+                + ", preferences=" + dto.getPreferences()
+                + ", registrationDate=" + dto.getRegistrationDate());
+        if (email != null && !email.isEmpty()) {
+            dto.setEmail(email);
+        }
         return ResponseEntity.ok(dto);
     }
 
@@ -209,26 +228,30 @@ public class UserController {
      * Update user profile.
      *
      * @param username the username
+     * @param emailHeader optional email propagated by gateway
      * @param updates the updates to apply
      * @return updated user profile
      */
     @PatchMapping("/users/me")
     public ResponseEntity<PrivateUserDTO> updateMyProfile(
         @RequestHeader("X-Username") final String username,
-        @RequestHeader(value = "X-Email", required = false) final String emailHeader,
+        @RequestHeader(value = "X-Email", required = false)
+            final String emailHeader,
             @RequestBody final Map<String, Object> updates) {
 
         kafkaLogService.info(LOGGER_NAME,
                 "PATCH /users/me - User: " + username);
 
         try {
-        User updatedUser = userService.updateUserProfile(username, updates);
-        PrivateUserDTO dto = mapToPrivateUserDTO(updatedUser);
-        // Include email if available
-        String email = (emailHeader != null && !emailHeader.isEmpty())
-            ? emailHeader : userService.getUserEmail(username);
-        if (email != null && !email.isEmpty()) dto.setEmail(email);
-        return ResponseEntity.ok(dto);
+            User updatedUser = userService.updateUserProfile(username, updates);
+            PrivateUserDTO dto = mapToPrivateUserDTO(updatedUser);
+            // Include email if available
+            String email = (emailHeader != null && !emailHeader.isEmpty())
+                ? emailHeader : userService.getUserEmail(username);
+            if (email != null && !email.isEmpty()) {
+                dto.setEmail(email);
+            }
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             kafkaLogService.error(LOGGER_NAME,
                     "Failed to update profile: " + e.getMessage());
@@ -391,7 +414,8 @@ public class UserController {
         }
 
         boolean complete = userService.isUserProfileComplete(username);
-        return ResponseEntity.ok(new UserProfileCompletionDTO(username, complete));
+        return ResponseEntity.ok(
+                new UserProfileCompletionDTO(username, complete));
     }
 
     /**

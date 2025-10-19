@@ -1,15 +1,11 @@
 package com.iwaproject.user.services;
 
-import com.iwaproject.user.dto.UserLanguageDTO;
-import com.iwaproject.user.dto.UserSpecialisationDTO;
 import com.iwaproject.user.keycloak.KeycloakClientService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.io.IOException;
 
 /**
  * Kafka consumer service for user-related messages.
@@ -114,9 +110,11 @@ public class KafkaConsumerService {
         if (!userService.userExists(username)) {
             String response = correlationId + ":false";
             kafkaTemplate.send(replyTopic, response);
-            kafkaLogService.info(LOGGER_NAME,
+            kafkaLogService.info(
+                    LOGGER_NAME,
                     "Sent user completion response to '" + replyTopic
-                    + "' for correlationId " + correlationId + " -> false (user does not exist)");
+                    + "' for correlationId " + correlationId
+                    + " -> false (user does not exist)");
             return;
         }
         boolean complete = userService.isUserProfileComplete(username);
@@ -124,7 +122,8 @@ public class KafkaConsumerService {
         kafkaTemplate.send(replyTopic, response);
         kafkaLogService.info(LOGGER_NAME,
                 "Sent user completion response to '" + replyTopic
-                + "' for correlationId " + correlationId + " -> " + complete);
+                + "' for correlationId " + correlationId
+                + " -> " + complete);
     }
 
 }

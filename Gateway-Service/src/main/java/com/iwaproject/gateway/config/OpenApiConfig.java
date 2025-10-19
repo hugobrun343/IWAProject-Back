@@ -13,8 +13,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * The name of the security scheme used for JWT Bearer authentication.
+     */
     public static final String SECURITY_SCHEME_NAME = "bearer-jwt";
 
+    /**
+     * Configures the OpenAPI documentation for the API Gateway.
+     *
+     * @return an OpenAPI instance with custom information and security settings
+     */
     @Bean
     public OpenAPI gatewayOpenAPI() {
         return new OpenAPI()
@@ -26,7 +34,9 @@ public class OpenApiConfig {
                         .license(new License().name("Proprietary")))
                 .externalDocs(new ExternalDocumentation()
                         .description("Project Repository"))
-                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
+                .addSecurityItem(
+                        new SecurityRequirement()
+                                .addList(SECURITY_SCHEME_NAME))
                 .schemaRequirement(SECURITY_SCHEME_NAME, new SecurityScheme()
                         .name(SECURITY_SCHEME_NAME)
                         .type(SecurityScheme.Type.HTTP)
