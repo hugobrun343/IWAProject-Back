@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -403,6 +404,488 @@ class UserServiceTest {
     }
 
     /**
+     * Test userExists when user exists.
+     */
+    @Test
+    @DisplayName("userExists when user exists should return true")
+    void userExists_userExists_shouldReturnTrue() {
+        // Given
+        when(userRepository.existsByUsername(TEST_USERNAME)).thenReturn(true);
+
+        // When
+        boolean result = userService.userExists(TEST_USERNAME);
+
+        // Then
+        assertTrue(result);
+        verify(userRepository).existsByUsername(TEST_USERNAME);
+    }
+
+    /**
+     * Test userExists when user does not exist.
+     */
+    @Test
+    @DisplayName("userExists when user does not exist should return false")
+    void userExists_userNotExists_shouldReturnFalse() {
+        // Given
+        when(userRepository.existsByUsername(TEST_USERNAME)).thenReturn(false);
+
+        // When
+        boolean result = userService.userExists(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+        verify(userRepository).existsByUsername(TEST_USERNAME);
+    }
+
+    /**
+     * Test userExists with null username.
+     */
+    @Test
+    @DisplayName("userExists with null username should return false")
+    void userExists_nullUsername_shouldReturnFalse() {
+        // When
+        boolean result = userService.userExists(null);
+
+        // Then
+        assertFalse(result);
+        verify(userRepository, never()).existsByUsername(any());
+    }
+
+    /**
+     * Test userExists with blank username.
+     */
+    @Test
+    @DisplayName("userExists with blank username should return false")
+    void userExists_blankUsername_shouldReturnFalse() {
+        // When
+        boolean result = userService.userExists("  ");
+
+        // Then
+        assertFalse(result);
+        verify(userRepository, never()).existsByUsername(any());
+    }
+
+    /**
+     * Test isUserProfileComplete with complete profile.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with complete profile should return true")
+    void isUserProfileComplete_completeProfile_shouldReturnTrue() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userLanguageRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserLanguage()));
+        when(userSpecialisationRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserSpecialisation()));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertTrue(result);
+        verify(userRepository).findByUsername(TEST_USERNAME);
+        verify(userLanguageRepository).findByUsername(TEST_USERNAME);
+        verify(userSpecialisationRepository).findByUsername(TEST_USERNAME);
+    }
+
+    /**
+     * Test isUserProfileComplete with incomplete profile (no firstName).
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no firstName should return false")
+    void isUserProfileComplete_noFirstName_shouldReturnFalse() {
+        // Given
+        testUser.setFirstName(null);
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userLanguageRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserLanguage()));
+        when(userSpecialisationRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserSpecialisation()));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with blank firstName.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with blank firstName should return false")
+    void isUserProfileComplete_blankFirstName_shouldReturnFalse() {
+        // Given
+        testUser.setFirstName("  ");
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userLanguageRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserLanguage()));
+        when(userSpecialisationRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserSpecialisation()));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with no lastName.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no lastName should return false")
+    void isUserProfileComplete_noLastName_shouldReturnFalse() {
+        // Given
+        testUser.setLastName(null);
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with no phoneNumber.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no phoneNumber should return false")
+    void isUserProfileComplete_noPhoneNumber_shouldReturnFalse() {
+        // Given
+        testUser.setPhoneNumber(null);
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with blank phoneNumber.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with blank phoneNumber should return false")
+    void isUserProfileComplete_blankPhoneNumber_shouldReturnFalse() {
+        // Given
+        testUser.setPhoneNumber("  ");
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with no location.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no location should return false")
+    void isUserProfileComplete_noLocation_shouldReturnFalse() {
+        // Given
+        testUser.setLocation(null);
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with no languages.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no languages should return false")
+    void isUserProfileComplete_noLanguages_shouldReturnFalse() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userLanguageRepository.findByUsername(TEST_USERNAME)).thenReturn(List.of());
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with no specialisations.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with no specialisations should return false")
+    void isUserProfileComplete_noSpecialisations_shouldReturnFalse() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userLanguageRepository.findByUsername(TEST_USERNAME))
+                .thenReturn(List.of(new UserLanguage()));
+        when(userSpecialisationRepository.findByUsername(TEST_USERNAME)).thenReturn(List.of());
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+    }
+
+    /**
+     * Test isUserProfileComplete with null username.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with null username should return false")
+    void isUserProfileComplete_nullUsername_shouldReturnFalse() {
+        // When
+        boolean result = userService.isUserProfileComplete(null);
+
+        // Then
+        assertFalse(result);
+        verify(userRepository, never()).findByUsername(any());
+    }
+
+    /**
+     * Test isUserProfileComplete with blank username.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete with blank username should return false")
+    void isUserProfileComplete_blankUsername_shouldReturnFalse() {
+        // When
+        boolean result = userService.isUserProfileComplete("  ");
+
+        // Then
+        assertFalse(result);
+        verify(userRepository, never()).findByUsername(any());
+    }
+
+    /**
+     * Test isUserProfileComplete when user not found.
+     */
+    @Test
+    @DisplayName("isUserProfileComplete when user not found should return false")
+    void isUserProfileComplete_userNotFound_shouldReturnFalse() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
+
+        // When
+        boolean result = userService.isUserProfileComplete(TEST_USERNAME);
+
+        // Then
+        assertFalse(result);
+        verify(userRepository).findByUsername(TEST_USERNAME);
+    }
+
+    /**
+     * Test createUserProfile with simple parameters.
+     */
+    @Test
+    @DisplayName("createUserProfile with simple parameters should create user")
+    void createUserProfile_simpleParameters_shouldCreateUser() {
+        // Given
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        User result = userService.createUserProfile(TEST_USERNAME, "John", "Doe");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(TEST_USERNAME, result.getUsername());
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+        verify(userRepository).save(any(User.class));
+    }
+
+    /**
+     * Test createUserProfile with payload - complete profile.
+     */
+    @Test
+    @DisplayName("createUserProfile with complete payload should create user")
+    void createUserProfile_completePayload_shouldCreateUser() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Map<String, Object> payload = Map.of(
+                "firstName", "John",
+                "lastName", "Doe",
+                "phoneNumber", "1234567890",
+                "location", "Paris",
+                "description", "Test user",
+                "profilePhoto", "photo.jpg",
+                "identityVerification", true,
+                "preferences", "{}"
+        );
+
+        // When
+        User result = userService.createUserProfile(TEST_USERNAME, payload);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(TEST_USERNAME, result.getUsername());
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+        assertEquals("1234567890", result.getPhoneNumber());
+        assertEquals("Paris", result.getLocation());
+        assertEquals("Test user", result.getDescription());
+        assertEquals("photo.jpg", result.getProfilePhoto());
+        assertTrue(result.getIdentityVerification());
+        assertEquals("{}", result.getPreferences());
+        verify(userRepository).save(any(User.class));
+    }
+
+    /**
+     * Test createUserProfile with payload - minimal profile.
+     */
+    @Test
+    @DisplayName("createUserProfile with minimal payload should create user")
+    void createUserProfile_minimalPayload_shouldCreateUser() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Map<String, Object> payload = Map.of(
+                "firstName", "John",
+                "lastName", "Doe"
+        );
+
+        // When
+        User result = userService.createUserProfile(TEST_USERNAME, payload);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(TEST_USERNAME, result.getUsername());
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+        verify(userRepository).save(any(User.class));
+    }
+
+    /**
+     * Test createUserProfile when user already exists.
+     */
+    @Test
+    @DisplayName("createUserProfile when user exists should throw exception")
+    void createUserProfile_userExists_shouldThrowException() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+
+        Map<String, Object> payload = Map.of(
+                "firstName", "John",
+                "lastName", "Doe"
+        );
+
+        // When & Then
+        assertThrows(IllegalStateException.class, () -> {
+            userService.createUserProfile(TEST_USERNAME, payload);
+        });
+
+        verify(userRepository).findByUsername(TEST_USERNAME);
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Test createUserProfile without firstName.
+     */
+    @Test
+    @DisplayName("createUserProfile without firstName should throw exception")
+    void createUserProfile_noFirstName_shouldThrowException() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
+
+        Map<String, Object> payload = Map.of("lastName", "Doe");
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            userService.createUserProfile(TEST_USERNAME, payload);
+        });
+
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Test createUserProfile without lastName.
+     */
+    @Test
+    @DisplayName("createUserProfile without lastName should throw exception")
+    void createUserProfile_noLastName_shouldThrowException() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
+
+        Map<String, Object> payload = Map.of("firstName", "John");
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            userService.createUserProfile(TEST_USERNAME, payload);
+        });
+
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Test updateUserProfile with all fields.
+     */
+    @Test
+    @DisplayName("updateUserProfile with all fields should update all fields")
+    void updateUserProfile_allFields_shouldUpdateAllFields() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Map<String, Object> updates = Map.of(
+                "firstName", "Jane",
+                "lastName", "Smith",
+                "phoneNumber", "9876543210",
+                "location", "Lyon",
+                "description", "Updated description",
+                "profilePhoto", "new_photo.jpg",
+                "identityVerification", true,
+                "preferences", "{\"theme\":\"dark\"}"
+        );
+
+        // When
+        User result = userService.updateUserProfile(TEST_USERNAME, updates);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Jane", result.getFirstName());
+        assertEquals("Smith", result.getLastName());
+        assertEquals("9876543210", result.getPhoneNumber());
+        assertEquals("Lyon", result.getLocation());
+        assertEquals("Updated description", result.getDescription());
+        assertEquals("new_photo.jpg", result.getProfilePhoto());
+        assertTrue(result.getIdentityVerification());
+        assertEquals("{\"theme\":\"dark\"}", result.getPreferences());
+        verify(userRepository).save(testUser);
+    }
+
+    /**
+     * Test updateUserProfile with unknown field.
+     */
+    @Test
+    @DisplayName("updateUserProfile with unknown field should ignore it")
+    void updateUserProfile_unknownField_shouldIgnoreIt() {
+        // Given
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        Map<String, Object> updates = Map.of(
+                "firstName", "Jane",
+                "unknownField", "value"
+        );
+
+        // When
+        User result = userService.updateUserProfile(TEST_USERNAME, updates);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Jane", result.getFirstName());
+        verify(userRepository).save(testUser);
+    }
+
+    /**
      * Create a test user.
      *
      * @return test user
@@ -422,3 +905,4 @@ class UserServiceTest {
         return user;
     }
 }
+

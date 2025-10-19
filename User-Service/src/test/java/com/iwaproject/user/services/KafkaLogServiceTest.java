@@ -16,6 +16,7 @@ import org.springframework.kafka.support.SendResult;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +52,7 @@ class KafkaLogServiceTest {
      * Setup test environment.
      */
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         // Mock the @Value annotations
         kafkaLogService = new KafkaLogService(
                 kafkaTemplate,
@@ -60,9 +61,12 @@ class KafkaLogServiceTest {
                 TEST_SERVICE_NAME
         );
         
-        // Mock KafkaTemplate.send to return a completed future
+        // Mock KafkaTemplate.send to return a completed future (lenient for conditional usage)
         CompletableFuture<SendResult<String, Object>> future = CompletableFuture.completedFuture(null);
-        when(kafkaTemplate.send(anyString(), any())).thenReturn(future);
+        lenient().when(kafkaTemplate.send(anyString(), any())).thenReturn(future);
+
+        // Mock ObjectMapper (lenient for conditional usage)
+        lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{}");
     }
 
     /**
@@ -114,6 +118,67 @@ class KafkaLogServiceTest {
         kafkaLogService.debug(TEST_LOGGER_NAME, TEST_MESSAGE);
 
         // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
+    }
+
+    /**
+     * Test error logging with throwable.
+     */
+    @Test
+    @DisplayName("error with throwable should send log message with exception details to Kafka")
+    void error_withThrowable_shouldSendLogMessageWithExceptionToKafka() {
+        // Given
+        Exception testException = new RuntimeException("Test exception");
+
+        // When
+        kafkaLogService.error(TEST_LOGGER_NAME, TEST_MESSAGE, testException);
+
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
+    }
+
+    /**
+     * Test error logging with null throwable.
+     */
+    @Test
+    @DisplayName("error with null throwable should send log message without exception to Kafka")
+    void error_withNullThrowable_shouldSendLogMessageWithoutExceptionToKafka() {
+        // When
+        kafkaLogService.error(TEST_LOGGER_NAME, TEST_MESSAGE, null);
+
+        // Then
+        verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
+    }
+
+    /**
+     * Test logging when ObjectMapper throws exception.
+     */
+    @Test
+    @DisplayName("logging when ObjectMapper fails should handle exception gracefully")
+    void logging_whenObjectMapperFails_shouldHandleExceptionGracefully() throws Exception {
+        // Given
+        when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
+
+        // When - should not throw exception
+        kafkaLogService.info(TEST_LOGGER_NAME, TEST_MESSAGE);
+
+        // Then - verify ObjectMapper was called
+        verify(objectMapper).writeValueAsString(any());
+    }
+
+    /**
+     * Test logging when KafkaTemplate throws exception.
+     */
+    @Test
+    @DisplayName("logging when KafkaTemplate fails should handle exception gracefully")
+    void logging_whenKafkaTemplateFails_shouldHandleExceptionGracefully() {
+        // Given
+        when(kafkaTemplate.send(anyString(), any())).thenThrow(new RuntimeException("Kafka error"));
+
+        // When - should not throw exception
+        kafkaLogService.warn(TEST_LOGGER_NAME, TEST_MESSAGE);
+
+        // Then - verify KafkaTemplate was called
         verify(kafkaTemplate).send(eq(TEST_LOGS_TOPIC), any());
     }
 }
