@@ -1,0 +1,23 @@
+meta {
+  name: Change Announcement Status
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{GATEWAY_URL}}/api/announcements/1/status?status=IN_PROGRESS
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Status changed to:', res.body.status);
+  } else {
+    console.error('❌ Failed to change status:', res.status, res.body);
+  }
+}

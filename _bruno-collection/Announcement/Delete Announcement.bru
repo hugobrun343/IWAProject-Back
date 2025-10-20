@@ -1,0 +1,23 @@
+meta {
+  name: Delete Announcement
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{GATEWAY_URL}}/api/announcements/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 204) {
+    console.log('✅ Announcement deleted successfully');
+  } else {
+    console.error('❌ Failed to delete announcement:', res.status, res.body);
+  }
+}

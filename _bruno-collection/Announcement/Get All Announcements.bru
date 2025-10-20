@@ -1,0 +1,23 @@
+meta {
+  name: Get All Announcements
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/announcements
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log(`✅ Retrieved ${Array.isArray(res.body) ? res.body.length : 0} announcements`);
+  } else {
+    console.error('❌ Failed to get announcements:', res.status);
+  }
+}
