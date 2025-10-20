@@ -1,0 +1,23 @@
+meta {
+  name: Get Announcements By Owner
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/announcements/owner/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log(`✅ Retrieved ${Array.isArray(res.body) ? res.body.length : 0} announcements for ownerId=1`);
+  } else {
+    console.error('❌ Failed to get owner announcements:', res.status);
+  }
+}

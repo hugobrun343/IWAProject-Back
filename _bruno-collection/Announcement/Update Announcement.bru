@@ -1,0 +1,41 @@
+meta {
+  name: Update Announcement
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{GATEWAY_URL}}/api/announcements/1
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "ownerId": 1,
+    "title": "UPDATED: Home assistance for elderly person",
+    "location": "Paris, France",
+    "description": "Updated description: focus on mobility support and medication reminders.",
+    "specificInstructions": "Please call before arriving.",
+    "careType": { "id": 1 },
+    "startDate": "2025-11-02",
+    "endDate": "2025-11-12",
+    "visitFrequency": "Every 2 days",
+    "remuneration": 55.0,
+    "identityVerificationRequired": true,
+    "urgentRequest": false,
+    "status": "PUBLISHED"
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Announcement updated:', res.body.id);
+  } else {
+    console.error('❌ Failed to update announcement:', res.status, res.body);
+  }
+}
