@@ -1,0 +1,23 @@
+meta {
+  name: Get Announcements By Status
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/announcements/status/PUBLISHED
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log(`✅ Retrieved ${Array.isArray(res.body) ? res.body.length : 0} announcements with status=PUBLISHED`);
+  } else {
+    console.error('❌ Failed to get announcements by status:', res.status);
+  }
+}
