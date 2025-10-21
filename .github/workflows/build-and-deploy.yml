@@ -40,15 +40,15 @@ jobs:
         id: changes
         run: |
           declare -A SERVICES=(
-            ["Gateway-Service"]="gateway:homeguard",
-            ["Announcement-Service"]="announcement:homeguard-announcement",
-            ["Application-Service"]="application:homeguard-application",
-            ["Chat-Service"]="chat:homeguard-chat",
-            ["Favorite-Service"]="favorite:homeguard-favorite",
-            ["Log-Service"]="log:homeguard-log",
-            ["Payment-Service"]="payment:homeguard-payment",
-            ["Rating-Service"]="rating:homeguard-rating",
-            ["User-Service"]="user:homeguard-user",
+            ["Gateway-Service"]="gateway:homeguard"
+            ["Announcement-Service"]="announcement:homeguard-announcement"
+            ["Application-Service"]="application:homeguard-application"
+            ["Chat-Service"]="chat:homeguard-chat"
+            ["Favorite-Service"]="favorite:homeguard-favorite"
+            ["Log-Service"]="log:homeguard-log"
+            ["Payment-Service"]="payment:homeguard-payment"
+            ["Rating-Service"]="rating:homeguard-rating"
+            ["User-Service"]="user:homeguard-user"
           )
           
           MATRIX='{"include":[]}'
