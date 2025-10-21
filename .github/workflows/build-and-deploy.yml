@@ -45,7 +45,6 @@ jobs:
             ["Application-Service"]="application:homeguard-application",
             ["Chat-Service"]="chat:homeguard-chat",
             ["Favorite-Service"]="favorite:homeguard-favorite",
-            ["Keycloak-Service"]="keycloak:homeguard-keycloak",
             ["Log-Service"]="log:homeguard-log",
             ["Payment-Service"]="payment:homeguard-payment",
             ["Rating-Service"]="rating:homeguard-rating",
@@ -76,7 +75,6 @@ jobs:
                   application) folder="Application-Service" ;;
                   chat) folder="Chat-Service" ;;
                   favorite) folder="Favorite-Service" ;;
-                  keycloak) folder="Keycloak-Service" ;;
                   log) folder="Log-Service" ;;
                   payment) folder="Payment-Service" ;;
                   rating) folder="Rating-Service" ;;
