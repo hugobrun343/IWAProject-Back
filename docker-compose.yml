@@ -95,22 +95,72 @@ services:
     networks:
       - iwa-network
 
-  log-postgres:
-    image: postgres:15-alpine
-    container_name: log-postgres
-    environment:
-      POSTGRES_DB: log_db
-      POSTGRES_USER: log_user
-      POSTGRES_PASSWORD: log_password
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: kafka
     ports:
-      - "5437:5432"
+      - "9092:9092"
+      - "29092:29092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_METADATA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_METADATA_LOG_MAX_RECORD_BYTES_BETWEEN_SNAPSHOTS: 20971520
+      KAFKA_METADATA_MAX_RETENTION_MS: 604800000
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
     volumes:
-      - log_data:/var/lib/postgresql/data
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U log_user -d log_db"]
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+    networks:
+      - iwa-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - iwa-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     networks:
       - iwa-network
 
@@ -175,7 +225,7 @@ services:
 # region Services
 
   keycloak:
-    image: quay.io/keycloak/keycloak:20.0.5
+    image: quay.io/keycloak/keycloak:latest
     container_name: keycloak-service
     environment:
       KEYCLOAK_ADMIN: admin
@@ -197,8 +247,8 @@ services:
 
   announcement-service:
     build:
-      context: ./Announcement-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Announcement-Service/Dockerfile
     container_name: announcement-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -206,9 +256,11 @@ services:
       SPRING_DATASOURCE_USERNAME: announcement_user
       SPRING_DATASOURCE_PASSWORD: announcement_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8081
+      SERVER_PORT: ${ANNOUNCEMENT_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8081:8081"
+      - "${ANNOUNCEMENT_SERVICE_PORT}:${ANNOUNCEMENT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       announcement-postgres:
@@ -218,8 +270,8 @@ services:
 
   application-service:
     build:
-      context: ./Application-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Application-Service/Dockerfile
     container_name: application-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -227,9 +279,11 @@ services:
       SPRING_DATASOURCE_USERNAME: application_user
       SPRING_DATASOURCE_PASSWORD: application_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8082
+      SERVER_PORT: ${APPLICATION_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8082:8082"
+      - "${APPLICATION_SERVICE_PORT}:${APPLICATION_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       application-postgres:
@@ -239,8 +293,8 @@ services:
 
   chat-service:
     build:
-      context: ./Chat-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Chat-Service/Dockerfile
     container_name: chat-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -248,9 +302,11 @@ services:
       SPRING_DATASOURCE_USERNAME: chat_user
       SPRING_DATASOURCE_PASSWORD: chat_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8083
+      SERVER_PORT: ${CHAT_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8083:8083"
+      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       chat-postgres:
@@ -260,8 +316,8 @@ services:
 
   favorite-service:
     build:
-      context: ./Favorite-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Favorite-Service/Dockerfile
     container_name: favorite-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -269,9 +325,11 @@ services:
       SPRING_DATASOURCE_USERNAME: favorite_user
       SPRING_DATASOURCE_PASSWORD: favorite_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8084
+      SERVER_PORT: ${FAVORITE_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8084:8084"
+      - "${FAVORITE_SERVICE_PORT}:${FAVORITE_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       favorite-postgres:
@@ -281,29 +339,36 @@ services:
 
   log-service:
     build:
-      context: ./Log-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Log-Service/Dockerfile
     container_name: log-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://log-postgres:5432/log_db
-      SPRING_DATASOURCE_USERNAME: log_user
-      SPRING_DATASOURCE_PASSWORD: log_password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8086
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: ${KAFKA_CONSUMER_GROUP_ID:-log-service-consumer}
+      KAFKA_CONSUMER_AUTO_OFFSET_RESET: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET:-earliest}
+      KAFKA_LOGS_TOPIC: microservices-logs
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+      ELASTICSEARCH_CONNECTION_TIMEOUT: ${ELASTICSEARCH_CONNECTION_TIMEOUT:-5s}
+      ELASTICSEARCH_SOCKET_TIMEOUT: ${ELASTICSEARCH_SOCKET_TIMEOUT:-30s}
+      SERVER_PORT: ${LOG_SERVICE_PORT}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      CORS_GATEWAY_ORIGINS: ${CORS_GATEWAY_ORIGINS}
     ports:
-      - "8086:8086"
+      - "${LOG_SERVICE_PORT}:${LOG_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
-      log-postgres:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     networks:
       - iwa-network
 
   payment-service:
     build:
-      context: ./Payment-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Payment-Service/Dockerfile
     container_name: payment-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -311,9 +376,11 @@ services:
       SPRING_DATASOURCE_USERNAME: payment_user
       SPRING_DATASOURCE_PASSWORD: payment_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8087
+      SERVER_PORT: ${PAYMENT_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8087:8087"
+      - "${PAYMENT_SERVICE_PORT}:${PAYMENT_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       payment-postgres:
@@ -323,8 +390,8 @@ services:
 
   rating-service:
     build:
-      context: ./Rating-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Rating-Service/Dockerfile
     container_name: rating-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -332,9 +399,11 @@ services:
       SPRING_DATASOURCE_USERNAME: rating_user
       SPRING_DATASOURCE_PASSWORD: rating_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8088
+      SERVER_PORT: ${RATING_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
     ports:
-      - "8088:8088"
+      - "${RATING_SERVICE_PORT}:${RATING_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       rating-postgres:
@@ -344,8 +413,8 @@ services:
 
   user-service:
     build:
-      context: ./User-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./User-Service/Dockerfile
     container_name: user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -353,26 +422,55 @@ services:
       SPRING_DATASOURCE_USERNAME: user_user
       SPRING_DATASOURCE_PASSWORD: user_password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8089
+      SERVER_PORT: ${USER_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LOGS_TOPIC: microservices-logs
+      KAFKA_USER_CONSUMER_GROUP_ID: ${KAFKA_USER_CONSUMER_GROUP_ID:-user-group}
+      KAFKA_USER_LISTENER_CONCURRENCY: ${KAFKA_USER_LISTENER_CONCURRENCY:-3}
+      KAFKA_USER_CONSUMER_AUTO_OFFSET_RESET: ${KAFKA_USER_CONSUMER_AUTO_OFFSET_RESET:-earliest}
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      CORS_GATEWAY_ORIGINS: ${CORS_GATEWAY_ORIGINS}
     ports:
-      - "8089:8089"
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       user-postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - iwa-network
 
   gateway-service:
     build:
-      context: ./Gateway-Service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Gateway-Service/Dockerfile
     container_name: gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8085
+      SERVER_PORT: ${GATEWAY_SERVICE_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      JWT_SKIP_ISSUER_VALIDATION: ${JWT_SKIP_ISSUER_VALIDATION}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      ANNOUNCEMENT_SERVICE_URL: ${ANNOUNCEMENT_SERVICE_URL}
+      APPLICATION_SERVICE_URL: ${APPLICATION_SERVICE_URL}
+      CHAT_SERVICE_URL: ${CHAT_SERVICE_URL}
+      FAVORITE_SERVICE_URL: ${FAVORITE_SERVICE_URL}
+      LOG_SERVICE_URL: ${LOG_SERVICE_URL}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL}
+      RATING_SERVICE_URL: ${RATING_SERVICE_URL}
+      CORS_FRONTEND_ORIGINS: ${CORS_FRONTEND_ORIGINS}
     ports:
-      - "8085:8085"
+      - "${GATEWAY_SERVICE_PORT}:${GATEWAY_SERVICE_PORT}"
     restart: unless-stopped
     depends_on:
       - announcement-service
@@ -395,7 +493,8 @@ volumes:
   chat_data:
   favorite_data:
   keycloak_data:
-  log_data:
+  kafka_data:
+  elasticsearch_data:
   payment_data:
   rating_data:
   user_data:

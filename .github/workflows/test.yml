@@ -4,22 +4,32 @@ on:
   workflow_run:
     workflows: ["Lint"]
     types: [completed]
+  pull_request:
     branches: [main]
 
-run-name: Test - ${{ github.event.workflow_run.head_commit.message }}
+run-name: Test - ${{ github.event.head_commit.message || github.event.workflow_run.head_commit.message }}
 
 jobs:
   check-lint-success:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_run' }}
     steps:
-      - name: Linting passed
-        run: echo "Linting workflow completed successfully"
+      - name: Check lint status
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ Lint failed"
+            exit 1
+          fi
+          echo "✅ Linting passed"
 
   test:
     name: Run All Tests
     runs-on: ubuntu-latest
     needs: [check-lint-success]
+    if: ${{ always() && !cancelled() && (github.event_name == 'pull_request' || needs.check-lint-success.result == 'success') }}
+    permissions:
+      contents: read
+      pull-requests: write
     
     steps:
       - uses: actions/checkout@v4
@@ -49,15 +59,10 @@ jobs:
       - name: Make test script executable
         run: chmod +x ./run-all-tests.sh
       
-      - name: Run unit tests
+      - name: Run all tests (unit + integration)
         run: |
-          echo "🧪 Running unit tests..."
-          ./run-all-tests.sh unit
-      
-      - name: Run integration tests
-        run: |
-          echo "🔗 Running integration tests with test databases..."
-          ./run-all-tests.sh integration
+          echo "🧪 Running all tests (unit + integration)..."
+          ./run-all-tests.sh all
       
       - name: Upload test reports
         if: always()
@@ -78,6 +83,22 @@ jobs:
           path: |
             */target/site/jacoco/
           retention-days: 30
+      
+      - name: Generate coverage summary for PR
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          echo "## 📊 Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Coverage |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|----------|" >> $GITHUB_STEP_SUMMARY
+          for service in Gateway-Service User-Service Log-Service Announcement-Service Application-Service Chat-Service Favorite-Service Payment-Service Rating-Service; do
+            if [ -f "$service/target/site/jacoco/index.html" ]; then
+              coverage=$(grep -o '[0-9]\+%' "$service/target/site/jacoco/index.html" | head -1 || echo "N/A")
+              echo "| $service | $coverage |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $service | N/A |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
       
       - name: Stop test databases
         if: always()

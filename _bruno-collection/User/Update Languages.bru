@@ -1,0 +1,30 @@
+meta {
+  name: Update Languages
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{GATEWAY_URL}}/api/users/me/languages
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "languages": ["English", "French"]
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Languages updated successfully');
+    console.log('🌍 Updated languages:', res.body);
+  } else {
+    console.error('❌ Failed to update languages:', res.status, res.body);
+  }
+}

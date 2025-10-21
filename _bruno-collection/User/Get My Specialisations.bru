@@ -1,0 +1,16 @@
+meta {
+  name: Get My Specialisations
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/users/me/specialisations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+

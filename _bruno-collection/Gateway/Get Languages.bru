@@ -1,0 +1,24 @@
+meta {
+  name: Get Languages
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/languages
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Languages retrieved:', res.body.length, 'languages');
+    console.log('📋 First language:', res.body[0]);
+  } else {
+    console.error('❌ Failed to get languages:', res.status);
+  }
+}

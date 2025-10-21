@@ -1,0 +1,24 @@
+meta {
+  name: Get Specialisations
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/specialisations
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{ACCESS_TOKEN}}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Specialisations retrieved:', res.body.length, 'specialisations');
+    console.log('📋 First specialisation:', res.body[0]);
+  } else {
+    console.error('❌ Failed to get specialisations:', res.status);
+  }
+}

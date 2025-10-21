@@ -1,20 +1,25 @@
 FROM eclipse-temurin:21-jdk AS build
 
-WORKDIR /app
+WORKDIR /workspace/app
 
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-COPY src src
+# Copy Maven wrapper and pom from service directory
+COPY Application-Service/mvnw .
+COPY Application-Service/.mvn .mvn
+COPY Application-Service/pom.xml .
 
+# Copy source code
+COPY Application-Service/src src
+
+# Build application
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests package
 
+# Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-ENV PORT=8080
 
-COPY --from=build /app/target/*.jar app.jar
+# Copy jar from build stage
+COPY --from=build /workspace/app/target/*.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

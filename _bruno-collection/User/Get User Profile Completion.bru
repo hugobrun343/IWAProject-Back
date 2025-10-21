@@ -1,0 +1,46 @@
+meta {
+  name: Get User Profile Completion
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/users/{{username}}/profile-complete
+  body: none
+  auth: bearer
+}
+
+params:path {
+  username: axel
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  let body = {};
+  const raw = res.body;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      try { body = JSON.parse(trimmed); } catch (e) {
+        console.warn('⚠️ Response is not valid JSON; showing raw text');
+        body = { raw: trimmed };
+      }
+    }
+  } else if (raw != null) {
+    body = raw;
+  }
+
+  if (res.status === 200 && typeof body.complete !== 'undefined') {
+    console.log(`✅ Profile completeness for ${body.username}: ${body.complete}`);
+  } else if (res.status === 404) {
+    console.error('❌ User not found');
+  } else if (res.status === 400) {
+    console.error('❌ Bad request');
+  } else {
+    const shown = typeof raw === 'string' ? raw : JSON.stringify(raw);
+    console.error(`❌ Unexpected: ${res.status} ${shown}`);
+  }
+}

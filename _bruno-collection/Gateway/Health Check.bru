@@ -1,0 +1,19 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{GATEWAY_URL}}/actuator/health
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Gateway is healthy:', res.body.status);
+  } else {
+    console.error('❌ Gateway health check failed:', res.status);
+  }
+}

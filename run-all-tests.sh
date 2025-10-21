@@ -20,11 +20,11 @@ TEST_TYPE=${1:-unit}
 SERVICES=(
     "Gateway-Service"
     "User-Service"
+    "Log-Service"
     "Announcement-Service"
     "Application-Service"
     "Chat-Service"
     "Favorite-Service"
-    "Log-Service"
     "Payment-Service"
     "Rating-Service"
 )
@@ -59,17 +59,25 @@ run_tests_for_service() {
     }
     
     case $test_type in
+        "lint")
+            # Run ONLY checkstyle lint
+            ./mvnw checkstyle:check -q
+            ;;
         "unit")
+            # Run ONLY unit tests (*Test.java, no DB needed)
             ./mvnw clean test -q
             ;;
         "integration")
-            ./mvnw clean verify -Pintegration-tests -q
+            # Run ONLY integration tests (*IntegrationTest.java, needs DB)
+            ./mvnw clean test-compile failsafe:integration-test failsafe:verify -q
             ;;
         "all")
-            ./mvnw clean verify -Pall-tests -q
+            # Run ALL tests (unit + integration, needs DB)
+            ./mvnw clean verify -q
             ;;
         "quality")
-            ./mvnw clean verify -Pquality -q
+            # Run all tests with quality checks
+            ./mvnw clean verify -q
             ;;
         *)
             print_error "Unknown test type: $test_type"
@@ -166,12 +174,14 @@ if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
     echo "Usage: $0 [test-type]"
     echo ""
     echo "Test types:"
+    echo "  lint        - Run checkstyle lint only"
     echo "  unit        - Run unit tests only (default)"
     echo "  integration - Run integration tests only"
     echo "  all         - Run all tests (unit + integration)"
     echo "  quality     - Run quality checks (static analysis, style)"
     echo ""
     echo "Examples:"
+    echo "  $0 lint         # Run lint checks"
     echo "  $0              # Run unit tests"
     echo "  $0 integration  # Run integration tests"
     echo "  $0 all          # Run all tests"

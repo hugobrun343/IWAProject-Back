@@ -1,0 +1,27 @@
+meta {
+  name: Get My Profile
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/users/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Profile retrieved successfully');
+    console.log('👤 Username:', res.body.username);
+    console.log('📧 Email:', res.body.email);
+    console.log('👨‍💼 First name:', res.body.firstName);
+    console.log('👨‍💼 Last name:', res.body.lastName);
+  } else {
+    console.error('❌ Failed to get profile:', res.status, res.body);
+  }
+}

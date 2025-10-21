@@ -1,0 +1,34 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{GATEWAY_URL}}/api/users/me
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+33123456789",
+    "address": "123 Main Street, Paris, France",
+    "description": "Experienced professional looking for new opportunities"
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    console.log('✅ Profile updated successfully');
+    console.log('👤 Updated profile:', res.body);
+  } else {
+    console.error('❌ Failed to update profile:', res.status, res.body);
+  }
+}

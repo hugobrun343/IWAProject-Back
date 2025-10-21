@@ -1,21 +1,18 @@
 package com.iwaproject.user;
 
+import com.iwaproject.user.config.TestConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.context.annotation.Import;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@TestPropertySource(locations = "classpath:application-test.properties")
+@Import(TestConfig.class)
 class UserServiceApplicationTests {
 
     @Test
     void contextLoads() {
         // This test verifies that the Spring application context loads successfully
-        // It's a basic smoke test to ensure all beans can be created
     }
-
-    // Removed the problematic mainMethodStartsApplication test
-    // The contextLoads test is sufficient to verify the application can start
 }

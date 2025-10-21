@@ -1,0 +1,28 @@
+meta {
+  name: User Exists
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{GATEWAY_URL}}/api/users/exists?username=axel
+  body: none
+  auth: bearer
+}
+
+params:query {
+  username: axel
+}
+
+auth:bearer {
+  token: {{ACCESS_TOKEN}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const body = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;
+    console.log(`🔍 Exists for ${body.username}: ${body.exists}`);
+  } else {
+    console.error(`❌ Failed to check existence: ${res.status} ${res.body}`);
+  }
+}

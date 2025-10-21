@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console Appender for local development -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Kafka Appender for centralized logging -->
+    <appender name="KAFKA" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"Gateway-Service"}</customFields>
+        </encoder>
+        <topic>microservices-logs</topic>
+        <keyingStrategy class="com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy"/>
+        <deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy"/>
+        <producerConfig>bootstrap.servers=${SPRING_KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}</producerConfig>
+        <producerConfig>acks=0</producerConfig>
+        <producerConfig>linger.ms=100</producerConfig>
+        <producerConfig>max.block.ms=0</producerConfig>
+    </appender>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="KAFKA"/>
+    </root>
+
+    <!-- Gateway specific logging -->
+    <logger name="com.iwaproject.gateway" level="DEBUG"/>
+    
+    <!-- Security logging -->
+    <logger name="org.springframework.security" level="INFO"/>
+    
+    <!-- Reduce noise from Spring -->
+    <logger name="org.springframework.web" level="WARN"/>
+    <logger name="org.springframework.cloud.gateway" level="INFO"/>
+    
+    <!-- Reduce Kafka noise to prevent log loops -->
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="com.github.danielwegener.logback.kafka" level="WARN"/>
+</configuration>
+
