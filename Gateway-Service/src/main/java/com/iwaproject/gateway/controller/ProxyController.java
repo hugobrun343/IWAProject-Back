@@ -115,7 +115,8 @@ public class ProxyController {
             // Forward non-2xx status from service instead of converting to 500
             HttpHeaders outHeaders = new HttpHeaders();
             HttpHeaders exHeaders = ex.getResponseHeaders();
-            HttpHeaders safeHeaders = (exHeaders != null) ? exHeaders : new HttpHeaders();
+            HttpHeaders safeHeaders = (exHeaders != null)
+                    ? exHeaders : new HttpHeaders();
             safeHeaders.forEach((name, values) -> {
                 if (!name.equalsIgnoreCase("transfer-encoding")
                         && !name.equalsIgnoreCase("content-length")) {
@@ -274,7 +275,8 @@ public class ProxyController {
             // Forward non-2xx status from service instead of converting to 500
             HttpHeaders outHeaders = new HttpHeaders();
             HttpHeaders exHeaders = ex.getResponseHeaders();
-            HttpHeaders safeHeaders = (exHeaders != null) ? exHeaders : new HttpHeaders();
+            HttpHeaders safeHeaders = (exHeaders != null)
+                    ? exHeaders : new HttpHeaders();
             safeHeaders.forEach((name, values) -> {
                 if (!name.equalsIgnoreCase("transfer-encoding")
                         && !name.equalsIgnoreCase("content-length")) {
