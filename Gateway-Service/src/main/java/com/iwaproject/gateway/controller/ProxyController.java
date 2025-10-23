@@ -72,6 +72,8 @@ public class ProxyController {
 
         LOGGER.debug("Proxying {} {} to User-Service",
                 request.getMethod(), path);
+        System.out.println("Proxying " + request.getMethod() + " "
+                + path + " to User-Service");
 
         // Copy headers (except Host)
         HttpHeaders headers = new HttpHeaders();
@@ -146,6 +148,7 @@ public class ProxyController {
         String targetUrl = userServiceUrl + "/api/languages";
 
         LOGGER.debug("Proxying GET /api/languages to User-Service");
+        System.out.println("Proxying GET /api/languages to User-Service");
 
         HttpHeaders headers = new HttpHeaders();
         HttpEntity<byte[]> entity = new HttpEntity<>(headers);
@@ -185,6 +188,7 @@ public class ProxyController {
         String targetUrl = userServiceUrl + "/api/specialisations";
 
         LOGGER.debug("Proxying GET /api/specialisations to User-Service");
+        System.out.println("Proxying GET /api/specialisations to User-Service");
 
         HttpHeaders headers = new HttpHeaders();
         HttpEntity<byte[]> entity = new HttpEntity<>(headers);
@@ -232,6 +236,8 @@ public class ProxyController {
 
         LOGGER.debug("Proxying {} {} to Announcement-Service",
                 request.getMethod(), path);
+        System.out.println("Proxying " + request.getMethod() + " "
+                + path + " to Announcement-Service");
 
         // Copy headers (except Host)
         HttpHeaders headers = new HttpHeaders();
